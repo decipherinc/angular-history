@@ -1,0 +1,13 @@
+{
+  "name": "angular-history",
+  "version": "0.1.0",
+  "main": "history.js",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests",
+    ".idea"
+  ]
+}
