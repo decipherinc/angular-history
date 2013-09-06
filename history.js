@@ -22,8 +22,12 @@
   }
 
   angular.module('decipher.history', ['lazyBind']).service('History',
-    function ($parse, $rootScope, $interpolate, $lazyBind, $timeout) {
-      var history = {}, pointers = {}, watches = {}, descriptions = {};
+    function ($parse, $rootScope, $interpolate, $lazyBind, $timeout, $log) {
+      var history = {},
+        pointers = {},
+        watches = {},
+        lazyWatches = {},
+        descriptions = {};
 
       /**
        * This happens to be some of the most curious code I've ever written.
@@ -71,42 +75,47 @@
        * @param exp Expression
        * @param id Scope $id
        * @param {Scope} locals AngularJS scope
+       * @param {boolean} pass Whether or not to pass on the first call
+       * @param {string} description AngularJS string to interpolate
        * @return {Function} Watch function
        * @private
        */
-      this._archive = function (exp, id, locals) {
+      this._archive = function (exp, id, locals, pass, description) {
         return function (newVal, oldVal) {
-          if (newVal !== oldVal) {
-
-            // initializing a bunch of crap
-            if (angular.isUndefined(history[id])) {
-              history[id] = {};
-            }
-            if (angular.isUndefined(pointers[id])) {
-              pointers[id] = {};
-            }
-            if (angular.isUndefined(history[id][exp])) {
-              history[id][exp] = [];
-            }
-            if (angular.isUndefined(pointers[id][exp])) {
-              pointers[id][exp] = 0;
-            }
-            history[id][exp].splice(pointers[id][exp] + 1);
-            history[id][exp].push(angular.copy(newVal));
-            // TODO convert types with __type__ if present
-            pointers[id][exp] = history[id][exp].length - 1;
-            if (pointers[id][exp] > 0) {
-              console.log('broadcasting');
-              $rootScope.$broadcast('History.archived', {
-                expression: exp,
-                newValue: newVal,
-                oldValue: oldVal,
-                description: descriptions[id][exp],
-                locals: locals
-              });
-            }
+          if (description) {
+            descriptions[id][exp] = $interpolate(description)(locals);
           }
+          if (pass) {
+            pass = false;
+            return;
+          }
+          // initializing a bunch of crap
+          if (angular.isUndefined(history[id])) {
+            history[id] = {};
+          }
+          if (angular.isUndefined(pointers[id])) {
+            pointers[id] = {};
+          }
+          if (angular.isUndefined(history[id][exp])) {
+            history[id][exp] = [];
+          }
+          if (angular.isUndefined(pointers[id][exp])) {
+            pointers[id][exp] = 0;
+          }
+          history[id][exp].splice(pointers[id][exp] + 1);
+          history[id][exp].push(angular.copy(newVal));
+          // TODO convert types with __type__ if present
+          pointers[id][exp] = history[id][exp].length - 1;
 
+          if (pointers[id][exp] > 0) {
+            $rootScope.$broadcast('History.archived', {
+              expression: exp,
+              newValue: newVal,
+              oldValue: oldVal,
+              description: descriptions[id][exp],
+              locals: locals
+            });
+          }
 
         };
       };
@@ -120,20 +129,31 @@
        * property is 'timeout' at this point
        */
       this.watch = function watch(exps, scope, description, lazyOptions) {
+        if (angular.isUndefined(exps)) {
+          throw 'expression required';
+        }
         scope = scope || $rootScope;
-        var i, id = scope.$id, exp, model;
+        description = description || '';
+        var i,
+          id = scope.$id,
+          exp,
+          model;
 
-        if (!angular.isArray(exps) && angular.isString(exps)) {
+        if (!angular.isArray(exps)) {
           exps = [exps];
         }
         if (angular.isUndefined(watches[id])) {
           watches[id] = {};
+        }
+        if (angular.isUndefined(lazyWatches[id])) {
+          lazyWatches[id] = {};
         }
         i = exps.length;
         while (i--) {
           exp = exps[i];
 
           // assert we have an assignable model
+          // TODO: better way to do this?
           try {
             model = $parse(exp);
             model.assign(scope, model(scope));
@@ -141,40 +161,19 @@
             throw new Error('expression "' + exp +
                             '" is not an assignable expression');
           }
-          // save descriptions
-          if (!descriptions[id]) {
-            descriptions[id] = {};
-          }
-          descriptions[id][exp] = description;
 
           // blast any old watches
           if (angular.isFunction(watches[id][exp])) {
             watches[id][exp]();
           }
 
-          // do we have an array?
-          if (angular.isArray(model) || angular.isObject(model)) {
-            if (angular.isObject(lazyOptions) && lazyBindFound) {
-              watches[id][exp] =
-              scope.$watchCollection(lazyWatch(scope, exp, lazyOptions.timeout),
-                this._archive(exp, id, scope));
-            }
-            else {
-              watches[id][exp] = scope.$watchCollection(exp,
-                this._archive(exp, id, scope));
-            }
+          if (!descriptions[id]) {
+            descriptions[id] = {};
           }
-          else {
-            if (angular.isObject(lazyOptions) && lazyBindFound) {
-              watches[id][exp] =
-              scope.$watch(lazyWatch(scope, exp, lazyOptions.timeout),
-                this._archive(exp, id, scope));
-            }
-            else {
-              watches[id][exp] =
-              scope.$watch(exp, this._archive(exp, id, scope));
-            }
-          }
+          descriptions[id][exp] = $interpolate(description)(scope);
+
+          this._watch(exp, scope, lazyOptions);
+
         }
       };
 
@@ -195,10 +194,20 @@
        */
       this.deepWatch =
       function deepWatch(exp, scope, description, lazyOptions) {
-        var match, targetFn, valueFn, keyName, valuesFn, values, value, valueName,
-          valuesName, that = this, targetName;
+        var match,
+          targetFn,
+          targetName,
+          valueFn,
+          keyName,
+          valuesFn,
+          values,
+          value,
+          valueName,
+          valuesName,
+          that = this;
+        description = description || '';
         if (!(match = exp.match(DEEPWATCH_EXP))) {
-          throw new Error('expected expression in form of "_select_ (as _label_)? for (_key_,)? _value_ in _collection_" but got "' +
+          throw new Error('expected expression in form of "_select_ for (_key_,)? _value_ in _collection_" but got "' +
                           exp + '"');
         }
         targetName = match[1];
@@ -211,33 +220,37 @@
         values = valuesFn(scope);
 
         angular.forEach(values, function (v, k) {
-          var locals = scope.$new(), id = locals.$id;
+          var locals = scope.$new(),
+            id = locals.$id;
           locals[valueName] = v;
           if (keyName) {
             locals[keyName] = k;
           }
           value = valueFn(scope, locals);
 
-          // save descriptions
-          if (!descriptions[id]) {
-            descriptions[id] = {};
-          }
-          descriptions[id][targetName] = $interpolate(description)(locals);
-
           if (!watches[id]) {
             watches[id] = {};
           }
+          if (!lazyWatches[id]) {
+            lazyWatches[id] = {};
+          }
+          if (!descriptions[id]) {
+            descriptions[id] = {};
+          }
+          descriptions[id][exp] = $interpolate(description)(locals);
 
           if (angular.isObject(lazyOptions) && lazyBindFound) {
             watches[id][targetName] = scope.$watch(lazyWatch(locals, targetName,
               lazyOptions.timeout || 500),
-              that._archive(targetName, id, locals));
+              that._archive(targetName, id, locals, false, description));
+            lazyWatches[id][exp] = true;
           }
           else {
             watches[id][targetName] = scope.$watch(
               function (scope) {
                 return targetFn(scope, locals);
-              }, that._archive(targetName, id, locals));
+              }, that._archive(targetName, id, locals, false, description));
+            lazyWatches[id][exp] = false;
           }
         });
       };
@@ -249,18 +262,21 @@
        * @param scope Scope
        */
       this.forget = function forget(exps, scope) {
+        var i, id;
         scope = scope || $rootScope;
-        var i;
+        id = scope.$id;
         if (!angular.isArray(exps) && angular.isString(exps)) {
           exps = [exps];
         }
         i = exps.length;
         while (i--) {
-          if (angular.isDefined(watches[exps[i]])) {
-            watches[scope.$id][exps[i]]();
+          if (angular.isDefined(watches[id][exps[i]])) {
+            watches[id][exps[i]]();
           }
-          delete history[scope.$id][exps[i]];
-          delete pointers[scope.$id][exps[i]];
+          delete watches[id][exps[i]];
+          delete history[id][exps[i]];
+          delete pointers[id][exps[i]];
+          delete lazyWatches[id][exps[i]];
         }
       };
 
@@ -270,6 +286,108 @@
        * @param scope Scope
        */
       this.undo = function undo(exp, scope) {
+        scope = scope || $rootScope;
+        if (angular.isUndefined(exp)) {
+          throw 'expression required';
+        }
+        var id = scope.$id,
+          scopeHistory = history[id],
+          stack,
+          model,
+          pointer,
+          value,
+          oldValue;
+
+        if (angular.isUndefined(scopeHistory)) {
+          throw 'could not find history for scope ' + id;
+        }
+        stack = scopeHistory[exp];
+        if (angular.isUndefined(stack)) {
+          throw new Error('could not find history in scope "' + id +
+                          ' against expression "' + exp + '"');
+        }
+
+        pointer = --pointers[id][exp];
+        if (pointer < 0) {
+          $log.warn('attempt to undo past history');
+          pointers[id][exp]++;
+          return;
+        }
+        // kill the watch so we can make this change.
+        watches[id][exp]();
+        model = $parse(exp);
+        oldValue = value = model(scope);
+        if (!angular.isObject(value) && !angular.isArray(value)) {
+          model.assign(scope, stack[pointer]);
+        }
+        else {
+          angular.extend(value, stack[pointer]);
+        }
+
+        this._watch(exp, scope, true);
+
+        $rootScope.$broadcast('History.undone', {
+          expression: exp,
+          oldValue: angular.copy(stack[pointer]),
+          newValue: angular.copy(oldValue),
+          description: descriptions[id][exp],
+          scope: scope
+        });
+      };
+
+      /**
+       * Actually issues the appropriate scope.$watch
+       * @param exp
+       * @param scope
+       * @param lazyOptions
+       * @param pass
+       * @private
+       */
+      this._watch = function _watch(exp, scope, pass, lazyOptions) {
+        var id,
+          model;
+        scope = scope || $rootScope;
+        pass = pass || false;
+        id = scope.$id;
+        model = $parse(exp);
+
+        // do we have an array or object?
+        if (angular.isArray(model(scope)) || angular.isObject(model(scope))) {
+          if (lazyBindFound && (angular.isObject(lazyOptions) ||
+                                (lazyWatches[id] && !!lazyWatches[id][exp]))) {
+            watches[id][exp] =
+            scope.$watchCollection(lazyWatch(scope, exp, lazyOptions.timeout),
+              this._archive(exp, id, scope, pass));
+            lazyWatches[id][exp] = true;
+          }
+          else {
+            watches[id][exp] = scope.$watchCollection(exp,
+              this._archive(exp, id, scope, pass));
+            lazyWatches[id][exp] = false;
+          }
+        }
+        else {
+          if (lazyBindFound && (angular.isObject(lazyOptions) ||
+                                (lazyWatches[id] && !!lazyWatches[id][exp]))) {
+            watches[id][exp] =
+            scope.$watch(lazyWatch(scope, exp, lazyOptions.timeout),
+              this._archive(exp, id, scope, pass));
+            lazyWatches[id][exp] = true;
+          }
+          else {
+            watches[id][exp] =
+            scope.$watch(exp, this._archive(exp, id, scope, pass));
+            lazyWatches[id][exp] = false;
+          }
+        }
+      };
+
+      /**
+       * Redos an expression.
+       * @param exp Expression
+       * @param scope Scope
+       */
+      this.redo = function redo(exp, scope) {
         scope = scope || $rootScope;
         var id = scope.$id,
           stack = history[id][exp],
@@ -281,47 +399,10 @@
           throw new Error('could not find history in scope "' + id +
                           ' against expression "' + exp + '"');
         }
-
-        pointer = --pointers[id][exp];
-        if (pointer < 0) {
-          return;
-        }
-        watches[id][exp]();
-
-        model = $parse(exp);
-        oldValue = value = model(scope);
-        if (!angular.isObject(value) && !angular.isArray(value)) {
-          model.assign(scope, stack[pointer]);
-        }
-        else {
-          angular.extend(value, stack[pointer]);
-        }
-
-        watches[id][exp] =
-        scope.$watch(exp, this._archive(exp, id, scope), true);
-        $rootScope.$broadcast('History.undone', {
-          expression: exp,
-          oldValue: angular.copy(stack[pointer]),
-          newValue: angular.copy(oldValue),
-          description: descriptions[id][exp],
-          scope: scope
-        });
-      };
-
-      /**
-       * Redos an expression.
-       * @param exp Expression
-       * @param scope Scope
-       */
-      this.redo = function redo(exp, scope) {
-        scope = scope || $rootScope;
-        var id = scope.$id, stack = history[id][exp], model, pointer, value, oldValue;
-        if (angular.isUndefined(stack)) {
-          throw new Error('could not find history in scope "' + id +
-                          ' against expression "' + exp + '"');
-        }
         pointer = ++pointers[id][exp];
         if (pointer === stack.length) {
+          $log.warn('attempt to redo past history');
+          pointers[id][exp]--;
           return;
         }
         watches[id][exp]();
@@ -333,8 +414,8 @@
         else {
           angular.extend(value, stack[pointer]);
         }
-        watches[id][exp] =
-        scope.$watch(exp, this._archive(exp, id, scope), true);
+
+        this._watch(exp, scope, true);
         $rootScope.$broadcast('History.redone', {
           expression: exp,
           oldValue: angular.copy(stack[pointer]),
@@ -377,23 +458,37 @@
        */
       this.revert = function (exp, scope) {
         scope = scope || $rootScope;
-        var id = scope.$id, stack = history[id][exp], model;
+        var id = scope.$id,
+          stack = history[id][exp],
+          model,
+          pointer,
+          value;
         if (angular.isUndefined(stack)) {
-          throw new Error('could not find history in scope "' + id +
-                          ' against expression "' + exp + '"');
-        }
-        if (stack.length === 0) {
+          $log.warn('nothing to revert');
           return;
         }
         watches[id][exp]();
         model = $parse(exp);
-        model.assign(scope, stack[0]);
+        value = model(scope);
+        pointer = 0;
+        if (!angular.isObject(value) && !angular.isArray(value)) {
+          model.assign(scope, stack[pointer]);
+        }
+        else {
+          angular.extend(value, stack[pointer]);
+        }
+
         // wait; what is this?
         history[scope.$id][exp].splice();
-        pointers[scope.$id][exp] = -1;
-        watches[id][exp] =
-        scope.$watch(exp, this._archive(exp, id, scope), true);
+        pointers[scope.$id][exp] = pointer;
+        this._watch(exp, scope, true);
       };
 
+      // expose for debugging/testing
+      this.history = history;
+      this.descriptions = descriptions;
+      this.pointers = pointers;
+      this.watches = watches;
+      this.lazyWatches = lazyWatches;
     });
 })();
