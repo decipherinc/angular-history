@@ -30,21 +30,6 @@
         descriptions = {};
 
       /**
-       * This happens to be some of the most curious code I've ever written.
-       * What it does is executes a $timeout every DEFAULT_TIMEOUT ms, outside
-       * of the $digest loop.  The timeout does absolutely nothing except call itself
-       * again.  The purpose of this is to keep the $watch callbacks executing at a
-       * reasonable clip, because they are $evalAsync'd as per docs.  I believe simply
-       * calling $timeout instructs the $evalAsync queue to process immediately.
-       * Otherwise we can see lag in our UI if the $broadcast is not done regularly.
-       */
-      var digest = function digest() {
-        $timeout(function () {
-          digest();
-        }, DEFAULT_TIMEOUT, true);
-      };
-
-      /**
        * Evaluates an expression on the scope lazily.  That means it will return
        * a new value every DEFAULT_TIMEOUT ms at maximum, even if you change it between
        * now and then.  This allows us to $broadcast at an interval instead of after
@@ -68,7 +53,6 @@
         };
       };
 
-      digest();
       /**
        * When an expression changes, store the information about it
        * and increment a pointer.
