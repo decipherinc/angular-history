@@ -89,7 +89,6 @@
     var History = this.History,
       scope = this.scope,
       $watch = this.sandbox.spy(scope, '$watch'),
-      $watchCollection = this.sandbox.spy(scope, '$watchCollection'),
       _archive = this.sandbox.stub(History, '_archive');
 
     Q.raises(History.watch, 'watch() with no params throws err');
@@ -134,47 +133,6 @@
 
     Q.equal(History.descriptions[scope.$id]['bar'], 'foo or bar',
       'assert second expression is processed');
-
-    scope.$apply('spam = [1, 2, 3]');
-
-    // there is some sort of bug in $watchCollection, and if
-    // you give it a proxy, it will die.  so we can't use the
-    // _archive stub anymore.
-    _archive.restore();
-
-    History.watch('spam', scope);
-
-    Q.equal($watchCollection.callCount, 1,
-      'watchCollection is called on array');
-
-    Q.equal($watchCollection.getCall(0).args[0], 'spam',
-      '1st call, 1st arg to $watchCollection is correct');
-
-    scope.$apply(function() {
-      scope.spam.push(4);
-    });
-    Q.deepEqual(History.history[scope.$id]['spam'], [[1,2,3,4]], 'history knows about push');
-
-    // can't do this because reasons
-//    Q.strictEqual($watchCollection.getCall(0).args[1], History._archive,
-//      '1st call, 2nd arg to $watchCollection is correct');
-
-    scope.$apply(function () {
-      scope.sausage = {
-        1: 'bratwurst',
-        2: 'weisswurst',
-        3: 'kielbasa'
-      };
-    });
-
-    History.watch('sausage', scope);
-
-    Q.equal($watchCollection.callCount, 2,
-      'watchCollection is called on object');
-
-    Q.equal($watchCollection.getCall(1).args[0], 'sausage',
-      '2nd call, 1st arg to $watchCollection is correct');
-
 
     // clean up watches
     angular.forEach(History.watches, function (expressions) {
@@ -307,8 +265,9 @@
       handler();
     });
 
-    scope.$apply(function() {
-      History.deepWatch('v.name for (k, v) in data', scope, '{{k}} changed to {{v.name}}');
+    scope.$apply(function () {
+      History.deepWatch('v.name for (k, v) in data', scope,
+        '{{k}} changed to {{v.name}}');
     });
     scope.$apply('data[1].name = "fred"');
 
@@ -334,9 +293,119 @@
       handler();
     });
     scope.$apply(function () {
-      History.deepWatch('d.name for d in data', scope, 'name changed to {{d.name}}');
+      History.deepWatch('d.name for d in data', scope,
+        'name changed to {{d.name}}');
     });
     scope.$apply('data[0].name = "fred"');
+
+  });
+
+  Q.test('batching', function () {
+    var History = this.History,
+      scope = this.scope;
+    Q.raises(History.transaction,
+      'transaction fails when not passed a function');
+    Q.raises(function () {
+      History.transaction(angular.noop);
+    }, 'transaction fails when not passed a scope');
+    scope.$apply('foo = [1,2,3]');
+    scope.$apply('bar = "baz"');
+    scope.$apply(function () {
+      scope.data = [
+        {id: 1, name: 'foo'},
+        {id: 2, name: 'bar'},
+        {id: 3, name: 'baz'}
+      ];
+      scope.otherdata = {
+        1: {
+          name: 'foo'
+        },
+        2: {
+          name: 'bar'
+        },
+        3: {
+          name: 'baz'
+        }
+      };
+    });
+    History.watch('foo', scope, 'foo array changed');
+    History.watch('bar', scope, 'bar string changed');
+    History.deepWatch('d.name for d in data', scope, 'name in data changed');
+    History.deepWatch('od.name for (key, od) in otherdata', scope,
+      'name in otherdata changed');
+
+    scope.$apply('pigs = "chickens"');
+    scope.$apply('foo = [4,5,6]');
+
+    var t = History.batch(function (scope) {
+      scope.$apply('foo[0] = 7');
+      scope.$apply('foo[1] = 8');
+      scope.$apply('foo[2] = 9');
+      scope.$apply('data[0].name = "marvin"');
+      scope.$apply('otherdata[1].name = "pookie"');
+      scope.$apply('bar = "spam"');
+      scope.$apply('pigs = "cows"');
+    }, scope);
+
+    Q.equal(scope.pigs, 'cows', 'pigs is now cows');
+    Q.equal(scope.bar, 'spam', 'bar is now spam');
+    Q.equal(scope.data[0].name, 'marvin', 'data[0].name is now marvin');
+    Q.equal(scope.otherdata[1].name, 'pookie',
+      'otherdata[1].name is now pookie');
+    Q.deepEqual(scope.foo, [7, 8, 9], 'foo is [7,8,9]');
+
+    scope.$on('History.rolledback', function (evt, data) {
+      Q.deepEqual(data.bar.values, [
+        {"oldValue": "spam", "newValue": "baz"}
+      ], '"bar" changed values are as expected');
+      Q.deepEqual(data.bar.descriptions, ["bar string changed"],
+        '"bar" description(s) are as expected');
+      Q.deepEqual(data.foo.values, [
+        {"oldValue": [7, 8, 9], "newValue": [7, 8, 6]},
+        {"oldValue": [7, 8, 6], "newValue": [7, 5, 6]},
+        {"oldValue": [7, 5, 6], "newValue": [4, 5, 6]}
+      ], '"foo" array values are as expected');
+      Q.deepEqual(data.foo.descriptions, [
+        "foo array changed",
+        "foo array changed",
+        "foo array changed"
+      ], '"foo" descriptions are as expected');
+      Q.deepEqual(data['d.name'].values, [
+        {
+          "newValue": "foo",
+          "oldValue": "marvin"
+        }
+      ], '"d.name" values are as expected');
+      Q.deepEqual(data['d.name'].descriptions, [
+        "name in data changed"
+      ], '"d.name" descriptions are as expected');
+      Q.deepEqual(data['od.name'].values, [
+        {
+          "newValue": "foo",
+          "oldValue": "pookie"
+        }
+      ], '"od.name" values are as expected');
+      Q.deepEqual(data['od.name'].descriptions, [
+        "name in otherdata changed"
+      ], '"od.name" descriptions are as expected');
+
+    });
+    scope.$apply(function () {
+      History.rollback(t);
+    });
+
+    Q.deepEqual(scope.foo, [4, 5, 6], 'foo is again [4,5,6]');
+    Q.equal(scope.bar, 'baz', 'bar is again baz');
+    Q.equal(scope.pigs, 'cows', 'pigs is still cows (no change)');
+    Q.equal(scope.data[0].name, 'foo', 'data[0].name is again "foo"');
+    Q.equal(scope.otherdata[1].name, 'foo', 'otherdata[1].name is again foo');
+
+    History.undo('foo', scope);
+    Q.deepEqual(scope.foo, [1, 2, 3], 'foo is again [1,2,3]');
+
+    History.redo('foo', scope);
+    Q.deepEqual(scope.foo, [4, 5, 6], 'foo is again [4,5,6]');
+    Q.ok(!History.canRedo('foo', scope), 'assert no more history');
 
   });
 })();

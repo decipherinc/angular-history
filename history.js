@@ -264,6 +264,21 @@
         }
       };
 
+
+      this._undo = function _undo(scope, exp, stack, pointer) {
+        var model,
+          oldValue,
+          id = scope.$id;
+        watches[id][exp]();
+        model = $parse(exp);
+        oldValue = model(scope);
+        model.assign(scope, stack[pointer]);
+        return {
+          oldValue: oldValue,
+          newValue: model(scope)
+        };
+      };
+
       /**
        * Undos an expression to last known value.
        * @param exp Expression
@@ -277,46 +292,36 @@
         var id = scope.$id,
           scopeHistory = history[id],
           stack,
-          model,
-          pointer,
-          value,
-          oldValue;
+          values,
+          pointer;
 
         if (angular.isUndefined(scopeHistory)) {
           throw 'could not find history for scope ' + id;
         }
+
         stack = scopeHistory[exp];
         if (angular.isUndefined(stack)) {
           throw new Error('could not find history in scope "' + id +
                           ' against expression "' + exp + '"');
         }
-
         pointer = --pointers[id][exp];
         if (pointer < 0) {
           $log.warn('attempt to undo past history');
           pointers[id][exp]++;
           return;
         }
-        // kill the watch so we can make this change.
-        watches[id][exp]();
-        model = $parse(exp);
-        oldValue = value = model(scope);
-        if (!angular.isObject(value) && !angular.isArray(value)) {
-          model.assign(scope, stack[pointer]);
-        }
-        else {
-          angular.extend(value, stack[pointer]);
-        }
-
+        values = this._undo(scope, exp, stack, pointer);
         this._watch(exp, scope, true);
 
         $rootScope.$broadcast('History.undone', {
           expression: exp,
-          oldValue: angular.copy(stack[pointer]),
-          newValue: angular.copy(oldValue),
+          oldValue: angular.copy(values.newValue),
+          newValue: angular.copy(values.oldValue),
           description: descriptions[id][exp],
           scope: scope
         });
+
+
       };
 
       /**
@@ -328,42 +333,25 @@
        * @private
        */
       this._watch = function _watch(exp, scope, pass, lazyOptions) {
-        var id,
-          model;
+        var id;
         scope = scope || $rootScope;
         pass = pass || false;
         id = scope.$id;
-        model = $parse(exp);
 
         // do we have an array or object?
-        if (angular.isArray(model(scope)) || angular.isObject(model(scope))) {
-          if (lazyBindFound && (angular.isObject(lazyOptions) ||
-                                (lazyWatches[id] && !!lazyWatches[id][exp]))) {
-            watches[id][exp] =
-            scope.$watchCollection(lazyWatch(scope, exp, lazyOptions.timeout),
-              this._archive(exp, id, scope, pass));
-            lazyWatches[id][exp] = true;
-          }
-          else {
-            watches[id][exp] = scope.$watchCollection(exp,
-              this._archive(exp, id, scope, pass));
-            lazyWatches[id][exp] = false;
-          }
+        if (lazyBindFound && (angular.isObject(lazyOptions) ||
+                              (lazyWatches[id] && !!lazyWatches[id][exp]))) {
+          watches[id][exp] =
+          scope.$watch(lazyWatch(scope, exp, lazyOptions.timeout),
+            this._archive(exp, id, scope, pass));
+          lazyWatches[id][exp] = true;
         }
         else {
-          if (lazyBindFound && (angular.isObject(lazyOptions) ||
-                                (lazyWatches[id] && !!lazyWatches[id][exp]))) {
-            watches[id][exp] =
-            scope.$watch(lazyWatch(scope, exp, lazyOptions.timeout),
-              this._archive(exp, id, scope, pass));
-            lazyWatches[id][exp] = true;
-          }
-          else {
-            watches[id][exp] =
-            scope.$watch(exp, this._archive(exp, id, scope, pass));
-            lazyWatches[id][exp] = false;
-          }
+          watches[id][exp] =
+          scope.$watch(exp, this._archive(exp, id, scope, pass), true);
+          lazyWatches[id][exp] = false;
         }
+
       };
 
       /**
@@ -466,6 +454,135 @@
         history[scope.$id][exp].splice();
         pointers[scope.$id][exp] = pointer;
         this._watch(exp, scope, true);
+      };
+
+      this.batch = function transaction(fn, scope) {
+        var child;
+        if (!angular.isFunction(fn)) {
+          throw 'transaction requires a function';
+        }
+        if (!angular.isObject(scope)) {
+          throw 'transaction requires a scope';
+        }
+
+        child = scope.$new();
+        child.$on('$destroy', function () {
+
+          angular.forEach(watches[child.$id], function (watch) {
+            watch();
+          });
+          delete watches[child.$id];
+          delete history[child.$id];
+          delete pointers[child.$id];
+          delete watches[child.$id];
+        });
+
+        pointers[child.$id] = angular.copy(pointers[scope.$id]);
+        descriptions[child.$id] = angular.copy(descriptions[scope.$id]);
+        lazyWatches[child.$id] = angular.copy(lazyWatches[scope.$id]);
+        history[child.$id] = angular.copy(history[scope.$id]);
+        watches[child.$id] = angular.copy(watches[scope.$id]);
+
+        child.$on('History.archived', function (evt, data) {
+          var deepChild,
+            exp = data.expression,
+            id;
+          if (data.locals.$id !== child.$parent.$id) {
+            deepChild = child.$new();
+            deepChild.$$locals = data.locals;
+            id = deepChild.$id;
+            if (angular.isUndefined(history[id])) {
+              history[id] = {};
+            }
+            if (angular.isUndefined(pointers[id])) {
+              pointers[id] = {};
+            }
+
+            history[id][exp] =
+            angular.copy(history[data.locals.$id][exp]);
+            pointers[id][exp] =
+            angular.isUndefined(pointers[id][exp]) ? 0 :
+            pointers[id][exp] + 1;
+          }
+        });
+
+        fn(scope);
+
+        return child;
+      };
+
+      this.rollback = function rollback(t) {
+        var _undo = this._undo,
+          $parent = t.$parent,
+          packets = {},
+          childHead,
+          childHeadLocals,
+          nextSibling,
+          nextSiblingLocals,
+          lastSiblingId;
+        if (!t || !angular.isObject(t)) {
+          throw 'must pass a transactional scope to rollback'
+        }
+
+        function _rollback(scope, comparisonScope) {
+          var id = scope.$id,
+            comparisonScopeId = comparisonScope.$id,
+            stack = history[id],
+            pointer,
+            descs,
+            exp,
+            exps = Object.keys(stack),
+            values,
+            i = exps.length;
+          while (i--) {
+            exp = exps[i];
+            values = [];
+            descs = [];
+            pointer = pointers[comparisonScopeId][exp];
+            while (pointer > pointers[id][exp]) {
+              pointer--;
+              values.push(_undo(comparisonScope,
+                exp, history[comparisonScopeId][exp], pointer));
+              pointers[comparisonScopeId][exp] = pointer;
+              descs.push(descriptions[comparisonScopeId][exp]);
+              // throw this off the history stack so
+              // we don't end up with it in the stack while we
+              // do normal undo() calls later against the same
+              // expression and scope
+              history[comparisonScopeId][exp].pop();
+            }
+            packets[exp] = {
+              values: values,
+              scope: scope,
+              comparisonScope: comparisonScope,
+              descriptions: descs
+            };
+          }
+        }
+
+        _rollback(t, $parent);
+
+        childHead = t.$$childHead;
+        if (childHead) {
+          childHeadLocals = childHead.$$locals;
+          if (childHeadLocals) {
+            _rollback(childHead, childHeadLocals);
+          }
+
+          while (nextSibling = childHead.$$nextSibling) {
+            // I guess $$nextSibling is an infinite loop
+            if (lastSiblingId === nextSibling.$id) {
+              break;
+            }
+            nextSiblingLocals = nextSibling.$$locals;
+            if (nextSiblingLocals) {
+              _rollback(nextSibling, nextSiblingLocals);
+            }
+            lastSiblingId = nextSibling.$id;
+          }
+        }
+
+        $rootScope.$broadcast('History.rolledback', packets);
       };
 
       // expose for debugging/testing

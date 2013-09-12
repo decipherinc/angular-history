@@ -3,6 +3,12 @@ angular-history
 
 A history service for AngularJS.  Undo/redo, that sort of thing.  Has nothing to do with the "back" button, unless you want it to.
 
+Current Version
+===============
+```
+0.3.0
+```
+
 Installation
 ============
 
@@ -68,7 +74,7 @@ angular.module('myApp').controller('MyCtrl', function($scope, History) {
 });
 ```
 
-An optional third parameter is the `description`, which will be emitted when an item is archived, undone, or redid, via a `$broadcast()`.  (TODO: `revert()` support.)  This allows you to attach to the event and do something with the info, such as pop up an alert with an "undo" button in it.  This value is interpolated against the passed `$scope` object.
+An optional third parameter is the `description`, which will be emitted when an item is archived, undone, or redid, via a `$broadcast()`.  (TODO: `revert()` support for a `$broadcast()`.)  This allows you to attach to the event and do something with the info, such as pop up an alert with an "undo" button in it.  This value is interpolated against the passed `$scope` object.
 
 If you have the `ngLazyBind` module, you may provide a fourth parameter to `History.watch()`:
 
@@ -190,6 +196,144 @@ So you can bind to `undo()` in your view, and it will undo the change to `foos[0
 - `description`: The optional `description` you may have passed
 - `locals`: A scope containing your expression's value.  For example, above we will have the object `f` available
 in `locals`, with a `name` property.
+
+Otherworldly Fanciness: Batching
+--------------------------------
+
+You can group a bunch of changes together and undo them all at once.  You will receive `History.archived` events for each change, but when you undo (in this case, `rollback()`), you will only receive one event with a lot of information about what happened.  For example (taken from the unit tests):
+
+```javascript
+
+// setup some data
+scope.$apply('foo = [1,2,3]');
+scope.$apply('bar = "baz"');
+scope.$apply(function () {
+  scope.data = [
+    {id: 1, name: 'foo'},
+    {id: 2, name: 'bar'},
+    {id: 3, name: 'baz'}
+  ];
+  scope.otherdata = {
+    1: {
+      name: 'foo'
+    },
+    2: {
+      name: 'bar'
+    },
+    3: {
+      name: 'baz'
+    }
+  };
+});
+
+// watch some of these things through various means
+History.watch('foo', scope, 'foo array changed');
+History.watch('bar', scope, 'bar string changed');
+History.deepWatch('d.name for d in data', scope, 'name in data changed');
+History.deepWatch('od.name for (key, od) in otherdata', scope,
+  'name in otherdata changed');
+
+// change some things outright
+scope.$apply('pigs = "chickens"');
+scope.$apply('foo = [4,5,6]');
+```
+
+Next we'll initiate a batch.  You will receive a special new scope that you can then pass to `History.rollback()` which will roll back all changes made within the batch closure.  See below.
+
+The function you pass to `History.batch()` will accept a scope parameter, and that is actually a child scope of the real scope.  Changes are made here and propagated to the parent's history.
+
+```javascript
+var t = History.batch(function (scope) {
+  scope.$apply('foo[0] = 7');
+  scope.$apply('foo[1] = 8');
+  scope.$apply('foo[2] = 9'); // 3 changes to "foo"
+  scope.$apply('data[0].name = "marvin"'); // one change to the "data" array
+  scope.$apply('otherdata[1].name = "pookie"'); // one change to the "otherdata" array
+  scope.$apply('bar = "spam"'); // change to a string
+  scope.$apply('pigs = "cows"'); // change to something *not* watched
+}, scope);
+```
+
+Notice the second parameter above which is the real scope.  Again, the scope passed into the callback is a child of this scope.
+
+Now let's handle a rollback.  First let's make sure we catch the event so we can report what happened to the user.
+
+```javascript
+scope.$on('History.rolledback', function (evt, data) {
+  // data looks like:
+  /*
+  {
+    bar: {
+      descriptions: ["bar string changed"],
+      values: [
+        {"oldValue": "spam", "newValue": "baz"}
+      ],
+      scope: {}, // actual "t" scope
+      comparisonScope: {} // original scope
+    },
+    foo: {
+      values: [
+        {"oldValue": [7, 8, 9], "newValue": [7, 8, 6]},
+        {"oldValue": [7, 8, 6], "newValue": [7, 5, 6]},
+        {"oldValue": [7, 5, 6], "newValue": [4, 5, 6]}
+      ],
+      descriptions: [
+        "foo array changed",
+        "foo array changed",
+        "foo array changed"
+      ],
+      scope: {}, // actual "t" scope
+      comparisonScope: {} // original scope
+    },
+    "d.name": {
+      values: [
+        {
+          "newValue": "foo",
+          "oldValue": "marvin"
+        }
+      ],
+      descriptions: [
+        "name in data changed"
+      ],
+      scope: {}, // actual "t" scope,
+      comparisonScope: {} // special local scope used within deepWatches
+    },
+    "od.name": { //.. same as above, really
+    }
+  }
+  */
+});
+scope.$apply(function () {
+  History.rollback(t);
+});
+```
+
+For testing purposes we wrap the call to `History.rollback()` in an `$apply()`, but this is likely not necessary outside of unit testing.
+
+Let's see what we ended up with by viewing some assertions:
+
+```javascript
+Q.deepEqual(scope.foo, [4, 5, 6], 'foo is again [4,5,6]');
+Q.equal(scope.bar, 'baz', 'bar is again baz');
+Q.equal(scope.pigs, 'cows', 'pigs is still cows (no change)');
+Q.equal(scope.data[0].name, 'foo', 'data[0].name is again "foo"');
+Q.equal(scope.otherdata[1].name, 'foo', 'otherdata[1].name is again foo');
+
+// see that you can undo further in some cases
+History.undo('foo', scope);
+Q.deepEqual(scope.foo, [1, 2, 3], 'foo is again [1,2,3]');
+
+// see you can redo again
+History.redo('foo', scope);
+Q.deepEqual(scope.foo, [4, 5, 6], 'foo is again [4,5,6]');
+
+// but also that you can't redo past the rollback.
+// I suppose this could change, but it would put a lot
+// of extra crap in the history.
+Q.ok(!History.canRedo('foo', scope), 'assert no more history');
+```
+
+This batching hasn't been tested with the "lazy" functionality mentioned earlier (yet), but it will certainly help you support mass changes to many variables at once, and be able to report those changes to the user.
 
 Internals
 ---------

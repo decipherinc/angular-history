@@ -49,18 +49,6 @@ module.exports = function (grunt) {
   grunt.registerTask('test', ['bower:install', 'connect', 'qunit', 'watch']);
   grunt.registerTask('default', ['test']);
 
-  grunt.event.on('qunit.spawn', function (url) {
-    grunt.log.ok("Running test suite: " + url);
-  });
-
-  grunt.event.on('qunit.moduleStart', function (name) {
-    grunt.log.ok("Running module: " + name);
-  });
-
-  grunt.event.on('qunit.testStart', function (name) {
-    grunt.log.ok("Running test: " + name);
-  });
-
   grunt.event.on('qunit.log',
     function (result, actual, expected, message) {
       if (!!result) {
