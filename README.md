@@ -74,7 +74,7 @@ angular.module('myApp').controller('MyCtrl', function($scope, History) {
 });
 ```
 
-An optional third parameter is the `description`, which will be emitted when an item is archived, undone, or redid, via a `$broadcast()`.  (TODO: `revert()` support for a `$broadcast()`.)  This allows you to attach to the event and do something with the info, such as pop up an alert with an "undo" button in it.  This value is interpolated against the passed `$scope` object.
+An optional third parameter is the `description`, which will be emitted when an item is archived, undone, redone, or reverted, via a `$broadcast()`.   This allows you to attach to the event and do something with the info, such as pop up an alert with an "undo" button in it.  This value is interpolated against the passed `$scope` object.
 
 If you have the `ngLazyBind` module, you may provide a fourth parameter to `History.watch()`:
 
@@ -125,7 +125,15 @@ You can revert to the original value at the time of the `watch()` instruction by
 History.revert('foo', $scope);
 ```
 
-At the time of this writing, it does not emit a `History.reverted` event, but it should.
+If you are looking at `History.history` and know where in the stack you want to go, pass a third parameter and you will revert to a specific revision in the stack:
+
+```javascript
+History.revert('foo', $scope, 23);
+```
+
+...which will revert directly to the 23rd revision, no questions asked.
+
+In addition, the `History.reverted` event will return to you the `pointer` that you passed it (which is `0` by default).
 
 Forgetting
 ----------
