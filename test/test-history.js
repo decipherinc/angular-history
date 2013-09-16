@@ -142,7 +142,7 @@
     });
   });
 
-  Q.test('undoing, redoing, reverting', 20, function () {
+  Q.test('undoing, redoing, reverting', 24, function () {
     var scope = this.scope,
       History = this.History,
       _archive = this.sandbox.spy(History, '_archive'),
@@ -163,6 +163,7 @@
     scope.$apply(function () {
       History.undo('foo', scope);
     });
+    Q.equal($broadcast.callCount, 2, '$broadcast happens on undo');
     Q.equal(scope.foo, 'bar', 'foo became bar again');
     scope.$apply(function () {
       History.undo('foo', scope);
@@ -173,6 +174,7 @@
     scope.$apply(function () {
       History.redo('foo', scope);
     });
+    Q.equal($broadcast.callCount, 3, '$broadcast happens on redo');
     Q.equal(warn.callCount, 1, 'warning not emitted');
     Q.equal(scope.foo, 'baz', 'foo is baz again');
     scope.$apply(function () {
@@ -192,7 +194,10 @@
     scope.$apply(function () {
       History.redo('foo', scope);
     });
-    History.revert('foo', scope);
+    scope.$apply(function() {
+      History.revert('foo', scope);
+    });
+    Q.equal($broadcast.callCount, 6, '$broadcast happens on revert');
     Q.ok(!History.canUndo('foo', scope), 'assert we cannot undo');
     Q.ok(History.canRedo('foo', scope), 'assert we can redo');
     Q.equal(scope.foo, 'bar', 'foo is bar after revert');
@@ -203,8 +208,19 @@
 
     scope.$apply('butts = "feet"');
     History.watch('butts', scope);
-    History.revert('butts', scope);
+    scope.$apply(function() {
+      History.revert('butts', scope);
+    });
     Q.equal(warn.callCount, 3, 'warning is emitted if nothing to revert');
+
+    scope.$apply('butts = "hands"');
+    scope.$apply('butts = "legs"');
+    scope.$apply(function() {
+      History.revert('butts', scope, 1);
+    });
+
+    Q.equal(scope.butts, 'hands', 'reverting to a specific pointer works');
+
   });
 
   Q.test('forget', 6, function () {

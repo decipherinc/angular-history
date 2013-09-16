@@ -264,8 +264,16 @@
         }
       };
 
-
-      this._undo = function _undo(scope, exp, stack, pointer) {
+      /**
+       * Internal function to change some value in the stack to another.
+       * @param scope
+       * @param exp
+       * @param stack
+       * @param pointer
+       * @returns {{oldValue: *, newValue: null}}
+       * @private
+       */
+      this._do = function _do(scope, exp, stack, pointer) {
         var model,
           oldValue,
           id = scope.$id;
@@ -310,7 +318,7 @@
           pointers[id][exp]++;
           return;
         }
-        values = this._undo(scope, exp, stack, pointer);
+        values = this._do(scope, exp, stack, pointer);
         this._watch(exp, scope, true);
 
         $rootScope.$broadcast('History.undone', {
@@ -363,10 +371,8 @@
         scope = scope || $rootScope;
         var id = scope.$id,
           stack = history[id][exp],
-          model,
-          pointer,
-          value,
-          oldValue;
+          values,
+          pointer;
         if (angular.isUndefined(stack)) {
           throw new Error('could not find history in scope "' + id +
                           ' against expression "' + exp + '"');
@@ -377,21 +383,14 @@
           pointers[id][exp]--;
           return;
         }
-        watches[id][exp]();
-        model = $parse(exp);
-        oldValue = value = model(scope);
-        if (!angular.isObject(value)) {
-          model.assign(scope, stack[pointer]);
-        }
-        else {
-          angular.extend(value, stack[pointer]);
-        }
 
+        values = this._do(scope, exp, stack, pointer);
         this._watch(exp, scope, true);
+
         $rootScope.$broadcast('History.redone', {
           expression: exp,
-          oldValue: angular.copy(stack[pointer]),
-          newValue: angular.copy(oldValue),
+          oldValue: angular.copy(values.newValue),
+          newValue: angular.copy(values.oldValue),
           description: descriptions[id][exp],
           scope: scope
         });
@@ -417,43 +416,45 @@
        * @returns {Boolean}
        */
       this.canRedo = function canRedo(exp, scope) {
+        var id;
         scope = scope || $rootScope;
-        return angular.isDefined(pointers[scope.$id]) &&
-               angular.isDefined(pointers[scope.$id][exp]) &&
-               pointers[scope.$id][exp] < history[scope.$id][exp].length - 1;
+        id = scope.$id;
+        return angular.isDefined(pointers[id]) &&
+               angular.isDefined(pointers[id][exp]) &&
+               pointers[id][exp] < history[id][exp].length - 1;
       };
 
       /**
        * Reverts to earliest known value of some expression.
        * @param exp Expression
        * @param scope Scope
+       * @param {number} [pointer=0]
        */
-      this.revert = function (exp, scope) {
+      this.revert = function (exp, scope, pointer) {
         scope = scope || $rootScope;
+        pointer = pointer || 0;
         var id = scope.$id,
           stack = history[id][exp],
-          model,
-          pointer,
-          value;
+          values;
         if (angular.isUndefined(stack)) {
           $log.warn('nothing to revert');
           return;
         }
-        watches[id][exp]();
-        model = $parse(exp);
-        value = model(scope);
-        pointer = 0;
-        if (!angular.isObject(value) && !angular.isArray(value)) {
-          model.assign(scope, stack[pointer]);
-        }
-        else {
-          angular.extend(value, stack[pointer]);
-        }
+        values = this._do(scope, exp, stack, pointer);
 
         // wait; what is this?
         history[scope.$id][exp].splice();
         pointers[scope.$id][exp] = pointer;
         this._watch(exp, scope, true);
+
+        $rootScope.$broadcast('History.reverted', {
+          expression: exp,
+          oldValue: angular.copy(values.newValue),
+          newValue: angular.copy(values.oldValue),
+          description: descriptions[id][exp],
+          scope: scope,
+          pointer: pointer
+        });
       };
 
       this.batch = function transaction(fn, scope) {
@@ -512,7 +513,7 @@
       };
 
       this.rollback = function rollback(t) {
-        var _undo = this._undo,
+        var _undo = this._do,
           $parent = t.$parent,
           packets = {},
           childHead,
