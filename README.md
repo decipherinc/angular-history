@@ -1,4 +1,4 @@
-angular-history
+angular-history [![Build Status](https://travis-ci.org/boneskull/angular-history.png?branch=master)](https://travis-ci.org/boneskull/angular-history)
 ===============
 
 A history service for AngularJS.  Undo/redo, that sort of thing.  Has nothing to do with the "back" button, unless you want it to.
@@ -6,7 +6,7 @@ A history service for AngularJS.  Undo/redo, that sort of thing.  Has nothing to
 Current Version
 ===============
 ```
-0.3.0
+0.3.1
 ```
 
 Installation

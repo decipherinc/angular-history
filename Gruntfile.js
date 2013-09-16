@@ -46,7 +46,7 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-bower-task');
   grunt.loadNpmTasks('grunt-contrib-watch');
 
-  grunt.registerTask('test', ['bower:install', 'connect', 'qunit', 'watch']);
+  grunt.registerTask('test', ['bower:install', 'connect', 'qunit']);
   grunt.registerTask('default', ['test']);
 
   grunt.event.on('qunit.log',
