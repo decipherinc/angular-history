@@ -1,0 +1,140 @@
+<h1><code ng:non-bindable="">Watch</code>
+<span class="hint">(object in module <code ng:non-bindable="">decipher.history</code>
+)</span>
+</h1>
+<div><h2 id="Description">Description</h2>
+<div class="description"><p>An object instance that provides several methods for executing handlers after
+certain changes have been made.</p>
+
+<p>Each function return the <code>Watch</code> instance, so you can chain the calls.</p>
+
+<p>See the docs for <a href="#/api/decipher.history.service:History#deepWatch">History.deepWatch()</a> for an example of using these functions.</p></div>
+<div class="member method"><h2 id="Methods">Methods</h2>
+<ul class="methods"><li><h3 id="addChangeHandler">addChangeHandler(name, fn, resolve)</h3>
+<div class="addchangehandler"><p>Adds a change handler function with name <code>name</code> to be executed
+whenever a value matching this watch's expression changes (is archived).</p><h4 id="Parameters">Parameters</h4>
+<ul class="parameters"><li><code ng:non-bindable="">name – {string} – </code>
+<p>Unique name of handler</p></li>
+<li><code ng:non-bindable="">fn – {Function} – </code>
+<p>Function to execute upon change</p></li>
+<li><code ng:non-bindable="">resolve – {object} – </code>
+<p>Mapping of function parameters to values</p></li>
+</ul>
+<h4 id="Returns">Returns</h4>
+<div class="returns"><code ng:non-bindable="">{Watch}</code>
+– <p>This <a href="#/api/decipher.history.object:Watch">Watch instance</a></p></div>
+</div>
+</li>
+<li><h3 id="addChangeHandler">addChangeHandler(name, fn, resolve)</h3>
+<div class="addchangehandler"><p>Adds a rollback handler function with name <code>name</code> to be executed
+whenever the batch tied to this watch is rolled back.</p><h4 id="Parameters">Parameters</h4>
+<ul class="parameters"><li><code ng:non-bindable="">name – {string} – </code>
+<p>Unique name of handler</p></li>
+<li><code ng:non-bindable="">fn – {Function} – </code>
+<p>Function to execute upon change</p></li>
+<li><code ng:non-bindable="">resolve – {object} – </code>
+<p>Mapping of function parameters to values</p></li>
+</ul>
+<h4 id="Returns">Returns</h4>
+<div class="returns"><code ng:non-bindable="">{Watch}</code>
+– <p>This <a href="#/api/decipher.history.object:Watch">Watch instance</a></p></div>
+</div>
+</li>
+<li><h3 id="addRedoHandler">addRedoHandler(name, fn, resolve)</h3>
+<div class="addredohandler"><p>Adds a redo handler function with name <code>name</code> to be executed
+whenever a value matching this watch's expression is redone.</p><h4 id="Parameters">Parameters</h4>
+<ul class="parameters"><li><code ng:non-bindable="">name – {string} – </code>
+<p>Unique name of handler</p></li>
+<li><code ng:non-bindable="">fn – {Function} – </code>
+<p>Function to execute upon change</p></li>
+<li><code ng:non-bindable="">resolve – {object} – </code>
+<p>Mapping of function parameters to values</p></li>
+</ul>
+<h4 id="Returns">Returns</h4>
+<div class="returns"><code ng:non-bindable="">{Watch}</code>
+– <p>This <a href="#/api/decipher.history.object:Watch">Watch instance</a></p></div>
+</div>
+</li>
+<li><h3 id="addRevertHandler">addRevertHandler(name, fn, resolve)</h3>
+<div class="addreverthandler"><p>Adds a revert handler function with name <code>name</code> to be executed
+whenever a value matching this watch's expression is reverted.</p><h4 id="Parameters">Parameters</h4>
+<ul class="parameters"><li><code ng:non-bindable="">name – {string} – </code>
+<p>Unique name of handler</p></li>
+<li><code ng:non-bindable="">fn – {Function} – </code>
+<p>Function to execute upon change</p></li>
+<li><code ng:non-bindable="">resolve – {object} – </code>
+<p>Mapping of function parameters to values</p></li>
+</ul>
+<h4 id="Returns">Returns</h4>
+<div class="returns"><code ng:non-bindable="">{Watch}</code>
+– <p>This <a href="#/api/decipher.history.object:Watch">Watch instance</a></p></div>
+</div>
+</li>
+<li><h3 id="addUndoHandler">addUndoHandler(name, fn, resolve)</h3>
+<div class="addundohandler"><p>Adds an undo handler function with name <code>name</code> to be executed
+whenever a value matching this watch's expression is undone.</p><h4 id="Parameters">Parameters</h4>
+<ul class="parameters"><li><code ng:non-bindable="">name – {string} – </code>
+<p>Unique name of handler</p></li>
+<li><code ng:non-bindable="">fn – {Function} – </code>
+<p>Function to execute upon change</p></li>
+<li><code ng:non-bindable="">resolve – {object} – </code>
+<p>Mapping of function parameters to values</p></li>
+</ul>
+<h4 id="Returns">Returns</h4>
+<div class="returns"><code ng:non-bindable="">{Watch}</code>
+– <p>This <a href="#/api/decipher.history.object:Watch">Watch instance</a></p></div>
+</div>
+</li>
+<li><h3 id="removeChangeHandler">removeChangeHandler(name)</h3>
+<div class="removechangehandler"><p>Removes a change handler with name <code>name</code>.</p><h4 id="Parameters">Parameters</h4>
+<ul class="parameters"><li><code ng:non-bindable="">name – {string} – </code>
+<p>Name of handler to remove</p></li>
+</ul>
+<h4 id="Returns">Returns</h4>
+<div class="returns"><code ng:non-bindable="">{Watch}</code>
+– <p>This <a href="#/api/decipher.history.object:Watch">Watch instance</a></p></div>
+</div>
+</li>
+<li><h3 id="removeRedoHandler">removeRedoHandler(name)</h3>
+<div class="removeredohandler"><p>Removes a redo handler with name <code>name</code>.</p><h4 id="Parameters">Parameters</h4>
+<ul class="parameters"><li><code ng:non-bindable="">name – {string} – </code>
+<p>Name of handler to remove</p></li>
+</ul>
+<h4 id="Returns">Returns</h4>
+<div class="returns"><code ng:non-bindable="">{Watch}</code>
+– <p>This <a href="#/api/decipher.history.object:Watch">Watch instance</a></p></div>
+</div>
+</li>
+<li><h3 id="removeRevertHandler">removeRevertHandler(name)</h3>
+<div class="removereverthandler"><p>Removes a revert handler with name <code>name</code>.</p><h4 id="Parameters">Parameters</h4>
+<ul class="parameters"><li><code ng:non-bindable="">name – {string} – </code>
+<p>Name of handler to remove</p></li>
+</ul>
+<h4 id="Returns">Returns</h4>
+<div class="returns"><code ng:non-bindable="">{Watch}</code>
+– <p>This <a href="#/api/decipher.history.object:Watch">Watch instance</a></p></div>
+</div>
+</li>
+<li><h3 id="removeRollbackHandler">removeRollbackHandler(name)</h3>
+<div class="removerollbackhandler"><p>Removes a rollback handler with name <code>name</code>.</p><h4 id="Parameters">Parameters</h4>
+<ul class="parameters"><li><code ng:non-bindable="">name – {string} – </code>
+<p>Name of handler to remove</p></li>
+</ul>
+<h4 id="Returns">Returns</h4>
+<div class="returns"><code ng:non-bindable="">{Watch}</code>
+– <p>This <a href="#/api/decipher.history.object:Watch">Watch instance</a></p></div>
+</div>
+</li>
+<li><h3 id="removeUndoHandler">removeUndoHandler(name)</h3>
+<div class="removeundohandler"><p>Removes a undo handler with name <code>name</code>.</p><h4 id="Parameters">Parameters</h4>
+<ul class="parameters"><li><code ng:non-bindable="">name – {string} – </code>
+<p>Name of handler to remove</p></li>
+</ul>
+<h4 id="Returns">Returns</h4>
+<div class="returns"><code ng:non-bindable="">{Watch}</code>
+– <p>This <a href="#/api/decipher.history.object:Watch">Watch instance</a></p></div>
+</div>
+</li>
+</ul>
+</div>
+</div>

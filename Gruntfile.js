@@ -13,10 +13,17 @@ module.exports = function (grunt) {
       }
     },
     connect: {
-      server: {
+      test: {
         options: {
           port: 8000,
           base: '.'
+        }
+      },
+      docs: {
+        options: {
+          keepalive: true,
+          port: 8000,
+          base: 'docs'
         }
       }
     },
@@ -37,7 +44,17 @@ module.exports = function (grunt) {
         ],
         tasks: ['qunit']
       }
-    }
+    },
+    ngdocs: {
+      options: {
+        scripts: [
+          'test/lib/angular/angular.js',
+          'history.js'],
+        html5Mode: false
+      },
+      all: ['history.js']
+    },
+    clean: ['docs']
 
   });
 
@@ -45,9 +62,14 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-contrib-connect');
   grunt.loadNpmTasks('grunt-bower-task');
   grunt.loadNpmTasks('grunt-contrib-watch');
+  grunt.loadNpmTasks('grunt-ngdocs');
+  grunt.loadNpmTasks('grunt-contrib-clean');
 
-  grunt.registerTask('test', ['bower:install', 'connect', 'qunit']);
-  grunt.registerTask('default', ['test']);
+  grunt.registerTask('test', ['bower:install', 'connect:test', 'qunit']);
+  grunt.registerTask('testwatch',
+    ['bower:install', 'connect:test', 'qunit', 'watch']);
+  grunt.registerTask('default',
+    ['clean', 'bower:install', 'ngdocs', 'connect:docs']);
 
   grunt.event.on('qunit.log',
     function (result, actual, expected, message) {

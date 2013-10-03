@@ -1,0 +1,329 @@
+<h1><code ng:non-bindable="">History</code>
+<span class="hint">(service in module <code ng:non-bindable="">decipher.history</code>
+)</span>
+</h1>
+<div><h2 id="Description">Description</h2>
+<div class="description"><p>Provides an API for keeping a history of model values.</p></div>
+<div class="member method"><h2 id="Methods">Methods</h2>
+<ul class="methods"><li><h3 id="batch">batch(fn, scope, description)</h3>
+<div class="batch"><p>Executes a function within a batch context which can then be rolled back.</p><h4 id="Parameters">Parameters</h4>
+<ul class="parameters"><li><code ng:non-bindable="">fn – {function} – </code>
+<p>Function to execute</p></li>
+<li><code ng:non-bindable="">scope<i>(optional)</i> – {Scope=} – </code>
+<p>Scope object; defaults to <code>$rootScope</code></p></li>
+<li><code ng:non-bindable="">description<i>(optional)</i> – {string=} – </code>
+<p>Description of this change</p></li>
+</ul>
+<h4 id="Returns">Returns</h4>
+<div class="returns"><code ng:non-bindable="">{Watch}</code>
+– <p><a href="#/api/decipher.history.object:Watch">Watch instance</a></p></div>
+<h4 id="Example">Example</h4>
+<div class="example"><h6>Source</h6>
+<div source-edit="decipher.history" source-edit-deps="angular.js script.js" source-edit-html="index.html-7" source-edit-css="" source-edit-js="script.js-6" source-edit-unit="" source-edit-scenario=""></div>
+<div class="tabbable"><div class="tab-pane" title="index.html">
+<pre class="prettyprint linenums" ng-set-text="index.html-7" ng-html-wrap-loaded="decipher.history angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-7">
+<ul>
+<li>herp: {{herp}}</li>
+<li>bar: {{bar}}</li>
+<li>frick: {{frick}}</li>
+</ul>
+<button ng-click="batch()">Batch</button>
+<button ng-click="rollback()">Rollback</button><br/>
+{{message}}
+</script>
+</div>
+<div class="tab-pane" title="script.js">
+<pre class="prettyprint linenums" ng-set-text="script.js-6"></pre>
+<script type="text/ng-template" id="script.js-6">
+angular.module('decipher.history').run(function(History, $rootScope) {
+       var t;
+
+       $rootScope.herp = 'derp';
+       $rootScope.bar = 'baz';
+       $rootScope.frick = 'frack';
+
+       $rootScope.$on('History.batchEnded', function(evt, data) {
+         t = data.transaction;
+       });
+
+       History.watch('herp');
+       History.watch('bar');
+       History.watch('frick');
+
+       $rootScope.batch = function() {
+         History.batch(function() {
+           $rootScope.herp = 'derp2';
+           $rootScope.bar = 'baz2';
+           $rootScope.frick = 'frack2';
+         })
+           .addRollbackHandler('myRollbackHandler', function() {
+             $rootScope.message = 'rolled a bunch of stuff back';
+           });
+         $rootScope.message = "batch complete";
+       };
+
+       $rootScope.rollback = function() {
+         if (angular.isDefined(t)) {
+           History.rollback(t);
+         }
+       };
+     });
+</script>
+</div>
+</div><h6>Demo</h6>
+<div class="well doc-example-live animator-container" ng-embed-app="decipher.history" ng-set-html="index.html-7" ng-eval-javascript="script.js-6"></div></div>
+</div>
+</li>
+<li><h3 id="canRedo">canRedo(exp, scope)</h3>
+<div class="canredo"><p>Whether or not we can redo an expression's value.</p><h4 id="Parameters">Parameters</h4>
+<ul class="parameters"><li><code ng:non-bindable="">exp – {string} – </code>
+<p>Expression</p></li>
+<li><code ng:non-bindable="">scope<i>(optional)</i> – {Scope=} – </code>
+<p>Scope; defaults to $rootScope</p></li>
+</ul>
+<h4 id="Returns">Returns</h4>
+<div class="returns"><code ng:non-bindable="">{Boolean}</code>
+– <p>Whether or not you can issue a <code>redo()</code></p></div>
+<h4 id="Example">Example</h4>
+<div class="example"><h6>Source</h6>
+<div source-edit="decipher.history" source-edit-deps="angular.js script.js" source-edit-html="index.html-5" source-edit-css="" source-edit-js="script.js-4" source-edit-unit="" source-edit-scenario=""></div>
+<div class="tabbable"><div class="tab-pane" title="index.html">
+<pre class="prettyprint linenums" ng-set-text="index.html-5" ng-html-wrap-loaded="decipher.history angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-5">
+<input type="text" ng-model="foo"/> <br/>
+<button ng-show="canUndo('foo')" ng-click="undo('foo')">Undo</button><br/>
+Can redo?  {{canRedo('foo')}}
+</script>
+</div>
+<div class="tab-pane" title="script.js">
+<pre class="prettyprint linenums" ng-set-text="script.js-4"></pre>
+<script type="text/ng-template" id="script.js-4">
+angular.module('decipher.history').run(function(History, $rootScope) {
+       $rootScope.foo = 'bar';
+       History.watch('foo');
+       $rootScope.canRedo = History.canRedo;
+       $rootScope.canUndo = History.canUndo;
+       $rootScope.undo = History.undo;
+     });
+</script>
+</div>
+</div><h6>Demo</h6>
+<div class="well doc-example-live animator-container" ng-embed-app="decipher.history" ng-set-html="index.html-5" ng-eval-javascript="script.js-4"></div></div>
+</div>
+</li>
+<li><h3 id="canUndo">canUndo(exp, scope)</h3>
+<div class="canundo"><p>Whether or not we have accumulated any history for a particular expression.</p><h4 id="Parameters">Parameters</h4>
+<ul class="parameters"><li><code ng:non-bindable="">exp – {string} – </code>
+<p>Expression</p></li>
+<li><code ng:non-bindable="">scope<i>(optional)</i> – {Scope=} – </code>
+<p>Scope; defaults to $rootScope</p></li>
+</ul>
+<h4 id="Returns">Returns</h4>
+<div class="returns"><code ng:non-bindable="">{boolean}</code>
+– <p>Whether or not you can issue an <code>undo()</code></p></div>
+<h4 id="Example">Example</h4>
+<div class="example"><h6>Source</h6>
+<div source-edit="decipher.history" source-edit-deps="angular.js script.js" source-edit-html="index.html-3" source-edit-css="" source-edit-js="script.js-2" source-edit-unit="" source-edit-scenario=""></div>
+<div class="tabbable"><div class="tab-pane" title="index.html">
+<pre class="prettyprint linenums" ng-set-text="index.html-3" ng-html-wrap-loaded="decipher.history angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-3">
+<input type="text" ng-model="foo"/>  Can undo?  {{canUndo('foo')}}
+</script>
+</div>
+<div class="tab-pane" title="script.js">
+<pre class="prettyprint linenums" ng-set-text="script.js-2"></pre>
+<script type="text/ng-template" id="script.js-2">
+angular.module('decipher.history').run(function(History, $rootScope) {
+       $rootScope.foo = 'bar';
+       History.watch('foo');
+       $rootScope.canUndo = History.canUndo;
+     });
+</script>
+</div>
+</div><h6>Demo</h6>
+<div class="well doc-example-live animator-container" ng-embed-app="decipher.history" ng-set-html="index.html-3" ng-eval-javascript="script.js-2"></div></div>
+</div>
+</li>
+<li><h3 id="deepWatch">deepWatch(exp, scope, description, lazyOptions)</h3>
+<div class="deepwatch"><p>Allows you to watch an entire array/object full of objects, but only watch
+a certain property of each object.</p><h4 id="Parameters">Parameters</h4>
+<ul class="parameters"><li><code ng:non-bindable="">exp – {(string|string[])} – </code>
+<p>Expression or array of expressions to watch</p></li>
+<li><code ng:non-bindable="">scope<i>(optional)</i> – {Scope=} – </code>
+<p>Scope; defaults to <code>$rootScope</code></p></li>
+<li><code ng:non-bindable="">description<i>(optional)</i> – {string=} – </code>
+<p>Description of this change</p></li>
+<li><code ng:non-bindable="">lazyOptions<i>(optional)</i> – {Object=} – </code>
+<p>Options for lazy loading.  Only valid
+property is <code>timeout</code> at this point</p></li>
+</ul>
+<h4 id="Returns">Returns</h4>
+<div class="returns"><code ng:non-bindable="">{Watch}</code>
+– <p><a href="#/api/decipher.history.object:Watch">Watch instance</a></p></div>
+<h4 id="Example">Example</h4>
+<div class="example"><h6>Source</h6>
+<div source-edit="decipher.history" source-edit-deps="angular.js script.js" source-edit-html="index.html-1" source-edit-css="" source-edit-js="script.js-0" source-edit-unit="" source-edit-scenario=""></div>
+<div class="tabbable"><div class="tab-pane" title="index.html">
+<pre class="prettyprint linenums" ng-set-text="index.html-1" ng-html-wrap-loaded="decipher.history angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-1">
+<input type="text" ng-model="foos[0].name"/> {{foos[0].name}}<br/>
+<span ng-show="message">{{message}}</span><br/>
+<button ng-disabled="!canUndo()" ng-click="undo()">Undo!</button>
+</script>
+</div>
+<div class="tab-pane" title="script.js">
+<pre class="prettyprint linenums" ng-set-text="script.js-0"></pre>
+<script type="text/ng-template" id="script.js-0">
+angular.module('decipher.history')
+.run(function(History, $rootScope) {
+     var exp, locals;
+
+     $rootScope.foos = [
+       {id: 1, name: 'herp'},
+       {id: 2, name: 'derp'}
+     ];
+
+     $rootScope.$on('History.archived', function(evt, data) {
+       $rootScope.message = data.description;
+       exp = data.expression;
+       locals = data.locals;
+     })
+
+     History.deepWatch('foo.name for foo in foos', $rootScope,
+       'Changed {{foo.id}} to name "{{foo.name}}"')
+       .addChangeHandler('myChangeHandler', function($expression,
+           $locals, foo) {
+         console.log(foo);
+         console.log("(totally hit the server and update the model)");
+         $rootScope.undo = function() {
+           History.undo($expression, $locals);
+         };
+         $rootScope.canUndo = function() {
+           return History.canUndo($expression, $locals);
+         };
+       }, {foo: 'foo'});
+   });
+</script>
+</div>
+</div><h6>Demo</h6>
+<div class="well doc-example-live animator-container" ng-embed-app="decipher.history" ng-set-html="index.html-1" ng-eval-javascript="script.js-0"></div></div>
+</div>
+</li>
+<li><h3 id="forget">forget(exps, scope)</h3>
+<div class="forget"><p>Unregister some watched expression(s).</p><h4 id="Parameters">Parameters</h4>
+<ul class="parameters"><li><code ng:non-bindable="">exps – {(string|string[])} – </code>
+<p>Array of expressions or one expression as a string</p></li>
+<li><code ng:non-bindable="">scope<i>(optional)</i> – {Scope=} – </code>
+<p>Scope object; defaults to $rootScope</p></li>
+</ul>
+</div>
+</li>
+<li><h3 id="redo">redo(exp, scope)</h3>
+<div class="redo"><p>Redoes (?) the last undo.</p><h4 id="Parameters">Parameters</h4>
+<ul class="parameters"><li><code ng:non-bindable="">exp – {string} – </code>
+<p>Expression to redo</p></li>
+<li><code ng:non-bindable="">scope<i>(optional)</i> – {Scope=} – </code>
+<p>Scope; defaults to <code>$rootScope</code></p></li>
+</ul>
+</div>
+</li>
+<li><h3 id="revert">revert(exp, scope, pointer)</h3>
+<div class="revert"><p>Reverts to earliest known value of some expression, or at a particular
+pointer if you please.</p><h4 id="Parameters">Parameters</h4>
+<ul class="parameters"><li><code ng:non-bindable="">exp – {string} – </code>
+<p>Expression</p></li>
+<li><code ng:non-bindable="">scope<i>(optional)</i> – {Scope=} – </code>
+<p>Scope; defaults to $rootScope</p></li>
+<li><code ng:non-bindable="">pointer<i>(optional)</i> – {number=} – </code>
+<p>Optional; defaults to 0</p></li>
+</ul>
+</div>
+</li>
+<li><h3 id="rollback">rollback(t)</h3>
+<div class="rollback"><p>Rolls a transaction back that was executed via <a href="#/api/decipher.history.service:History#batch">batch()</a>.</p>
+
+<p>For an example, see <a href="#/api/decipher.history.service:History#batch">batch()</a>.</p><h4 id="Parameters">Parameters</h4>
+<ul class="parameters"><li><code ng:non-bindable="">t – {Scope} – </code>
+<p>Scope object in which the transaction was executed.</p></li>
+</ul>
+</div>
+</li>
+<li><h3 id="undo">undo(exp, scope)</h3>
+<div class="undo"><p>Undos an expression to last known value.</p><h4 id="Parameters">Parameters</h4>
+<ul class="parameters"><li><code ng:non-bindable="">exp – {string} – </code>
+<p>Expression to undo</p></li>
+<li><code ng:non-bindable="">scope<i>(optional)</i> – {Scope=} – </code>
+<p>Scope; defaults to <code>$rootScope</code></p></li>
+</ul>
+</div>
+</li>
+<li><h3 id="watch">watch(exps, scope, description, lazyOptions)</h3>
+<div class="watch"><p>Register some expression(s) for watching.</p><h4 id="Parameters">Parameters</h4>
+<ul class="parameters"><li><code ng:non-bindable="">exps – {(string|string[])} – </code>
+<p>Array of expressions or one expression as a string</p></li>
+<li><code ng:non-bindable="">scope<i>(optional)</i> – {Scope=} – </code>
+<p>Scope; defaults to <code>$rootScope</code></p></li>
+<li><code ng:non-bindable="">description<i>(optional)</i> – {string=} – </code>
+<p>Description of this change</p></li>
+<li><code ng:non-bindable="">lazyOptions<i>(optional)</i> – {Object=} – </code>
+<p>Options for lazy loading.  Only valid
+property is <code>timeout</code> at this point</p></li>
+</ul>
+<h4 id="Returns">Returns</h4>
+<div class="returns"><code ng:non-bindable="">{Watch}</code>
+– <p><a href="#/api/decipher.history.object:Watch">Watch instance</a></p></div>
+<h4 id="Example">Example</h4>
+<div class="example"><h6>Source</h6>
+<div source-edit="decipher.history" source-edit-deps="angular.js script.js" source-edit-html="index.html" source-edit-css="" source-edit-js="script.js" source-edit-unit="" source-edit-scenario=""></div>
+<div class="tabbable"><div class="tab-pane" title="index.html">
+<pre class="prettyprint linenums" ng-set-text="index.html" ng-html-wrap-loaded="decipher.history angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html">
+<input type="text" ng-model="foo"/> {{foo}}<br/>
+<span ng-show="message">{{message}}</span><br/>
+</script>
+</div>
+<div class="tab-pane" title="script.js">
+<pre class="prettyprint linenums" ng-set-text="script.js"></pre>
+<script type="text/ng-template" id="script.js">
+
+angular.module('decipher.history')
+.run(function(History, $rootScope) {
+     $rootScope.foo = 'foo';
+
+     $rootScope.$on('History.archived', function(evt, data) {
+       $rootScope.message = data.description;
+     });
+
+     History.watch('foo', $rootScope, 'you changed the foo');
+ });
+</script>
+</div>
+</div><h6>Demo</h6>
+<div class="well doc-example-live animator-container" ng-embed-app="decipher.history" ng-set-html="index.html" ng-eval-javascript="script.js"></div></div>
+</div>
+</li>
+</ul>
+</div>
+<div class="member property"><h2 id="Properties">Properties</h2>
+<ul class="properties"><li><h3 id="descriptions">descriptions</h3>
+<div class="descriptions"><p>The complete map of change descriptions, keyed by Scope <code>$id</code> and then expression.</p></div>
+</li>
+<li><h3 id="history">history</h3>
+<div class="history"><p>The complete history stack, keyed by Scope <code>$id</code> and then expression.</p></div>
+</li>
+<li><h3 id="lazyWatches">lazyWatches</h3>
+<div class="lazywatches"><p>The complete index of all AngularJS <code>$watch</code>es designated to be "lazy", keyed by Scope <code>$id</code> and then expression.</p></div>
+</li>
+<li><h3 id="pointers">pointers</h3>
+<div class="pointers"><p>The complete pointer map, keyed by Scope <code>$id</code> and then expression.</p></div>
+</li>
+<li><h3 id="watchObjs">watchObjs</h3>
+<div class="watchobjs"><p>The complete index of all <a href="#/api/decipher.history.object:Watch">Watch</a> objects registered, keyed by Scope <code>$id</code> and then (optionally) expression.</p></div>
+</li>
+<li><h3 id="watches">watches</h3>
+<div class="watches"><p>The complete index of all AngularJS <code>$watch</code>es, keyed by Scope <code>$id</code> and then expression.</p></div>
+</li>
+</ul>
+</div>
+</div>

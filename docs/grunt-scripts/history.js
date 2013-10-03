@@ -266,12 +266,9 @@
        */
       Watch.prototype._fireHandlers =
       function _fireHandlers(where, exp, scope) {
-        var hasScope = angular.isDefined(scope),
-          t = this.transaction;
+        var hasScope = angular.isDefined(scope);
         angular.forEach(this[where], function (handler) {
-          var locals = {
-            $locals: t
-          };
+          var locals = {};
           if (angular.isDefined(scope)) {
             locals.$locals = scope;
           }
