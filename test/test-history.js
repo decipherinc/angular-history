@@ -91,11 +91,11 @@
       $watch = this.sandbox.spy(scope, '$watch'),
       _archive = this.sandbox.stub(History, '_archive');
 
-    Q.raises(History.watch, 'watch() with no params throws err');
-    Q.raises(function () {
+    Q.throws(History.watch, 'watch() with no params throws err');
+    Q.throws(function () {
       History.watch(undefined, {});
     }, 'watch() w/o exp param throws err');
-    Q.raises(function () {
+    Q.throws(function () {
       History.watch(true);
     }, 'non-assignable expression throws err');
 
@@ -149,7 +149,7 @@
       $broadcast = this.sandbox.stub(this.$rootScope, '$broadcast'),
       warn = this.sandbox.stub(this.$log, 'warn');
 
-    Q.raises(History.undo, 'throws err if no expression passed');
+    Q.throws(History.undo, 'throws err if no expression passed');
     scope.$apply('foo = "bar"');
 
     scope.$apply(function () {
@@ -252,7 +252,7 @@
       scope = this.scope,
       handler;
 
-    Q.raises(History.deepWatch, 'assert bad regex match raises error');
+    Q.throws(History.deepWatch, 'assert bad regex match throws error');
 
     scope.data = {
       1: {
@@ -318,7 +318,7 @@
   Q.test('batching', function () {
     var History = this.History,
       scope = this.scope;
-    Q.raises(History.batch,
+    Q.throws(History.batch,
       'transaction fails when not passed a function');
     scope.$apply('foo = [1,2,3]');
     scope.$apply('bar = "baz"');
@@ -355,9 +355,6 @@
     });
 
     History.batch(function () {
-
-
-
       scope.$apply('foo[0] = 7');
       scope.$apply('foo[1] = 8');
       scope.$apply('foo[2] = 9');
@@ -429,5 +426,91 @@
     Q.deepEqual(scope.foo, [4, 5, 6], 'foo is again [4,5,6]');
     Q.ok(!History.canRedo('foo', scope), 'assert no more history');
 
+  });
+
+  Q.test('Watch objects', function() {
+    var scope = this.scope,
+      History = this.History,
+      changeSpy = this.sandbox.spy(),
+      undoSpy = this.sandbox.spy(),
+      redoSpy = this.sandbox.spy(),
+      revertSpy = this.sandbox.spy(),
+      rollbackSpy = this.sandbox.spy();
+
+    scope.$apply('bar = "baz"');
+    scope.$apply(function () {
+      scope.data = [
+        {id: 1, name: 'foo'},
+        {id: 2, name: 'bar'},
+        {id: 3, name: 'baz'}
+      ];
+    });
+
+    var w = History.watch('bar', scope)
+      .addChangeHandler('changeSpy', function() {
+        return changeSpy();
+      })
+      .addUndoHandler('undoSpy', function() {
+        return undoSpy();
+      })
+      .addRedoHandler('redoSpy', function() {
+        return redoSpy();
+      })
+      .addRevertHandler('revertSpy', function() {
+        return revertSpy();
+      });
+    scope.$apply();
+
+    scope.$apply('bar = "foo"');
+
+    Q.equal(changeSpy.callCount, 1, 'change handler fired');
+
+    scope.$apply(function() {
+      History.undo('bar', scope);
+    });
+
+    Q.equal(undoSpy.callCount, 1, 'undo handler fired');
+
+    scope.$apply(function() {
+      History.redo('bar', scope);
+    });
+
+    Q.equal(redoSpy.callCount, 1, 'redo handler fired');
+
+    scope.$apply(function() {
+      History.revert('bar', scope);
+    });
+
+    Q.equal(revertSpy.callCount, 1, 'revert handler fired');
+
+    w.removeChangeHandler('changeSpy')
+      .removeUndoHandler('undoSpy')
+      .removeRedoHandler('redoSpy')
+      .removeRevertHandler('revertSpy');
+
+    Q.equal(Object.keys(w._changeHandlers), 0, 'we removed the change handlers');
+    Q.equal(Object.keys(w._undoHandlers), 0, 'we removed the undo handlers');
+    Q.equal(Object.keys(w._redoHandlers), 0, 'we removed the redo handlers');
+    Q.equal(Object.keys(w._revertHandlers), 0, 'we removed the revert handlers');
+
+    History.deepWatch('d.name for d in data', scope)
+      .addRollbackHandler('rollbackSpy', function() {
+        return rollbackSpy();
+      });
+
+    scope.$apply();
+
+    w = History.batch(function() {
+      scope.$apply('data[0].name = "omar"');
+      scope.$apply('data[1].name = "little"');
+    }, scope);
+
+    scope.$apply();
+
+    History.rollback(w.transaction);
+
+    w.removeRollbackHandler('rollbackSpy');
+
+    Q.equal(Object.keys(w._rollbackHandlers), 0, 'we removed the rollback handlers');
   });
 })();
