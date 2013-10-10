@@ -223,6 +223,35 @@
 
   });
 
+  Q.test('arrays', function() {
+    var History = this.History,
+      scope = this.scope;
+
+    scope.$apply(function() {
+      scope.hamburgers = [{
+        pickles: [1,2,3]
+      }];
+    });
+    var e, s;
+
+    scope.$on('History.archived', function(evt, data) {
+      e = data.expression;
+      s = data.locals;
+    });
+    scope.$apply(function() {
+      History.deepWatch('h.pickles for h in hamburgers', scope);
+    });
+    scope.$apply('hamburgers[0].pickles.push(4)');
+
+    Q.deepEqual(scope.hamburgers[0].pickles, [1,2,3,4], 'hamburgers is as expected');
+    scope.$apply(function() {
+      History.undo(e, s);
+    });
+    console.log(JSON.stringify(History.history));
+    Q.deepEqual(scope.hamburgers[0].pickles, [1,2,3], 'hamburgers has but three');
+
+  });
+
   Q.test('forget', 6, function () {
     var History = this.History,
       scope = this.scope;

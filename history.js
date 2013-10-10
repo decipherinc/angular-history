@@ -601,6 +601,7 @@
           value,
           valueName,
           valuesName,
+          watchFn,
           _clear = this._clear,
           _archive = this._archive;
         description = description || '';
@@ -647,12 +648,12 @@
             watches[id][targetName] =
             locals.$watch(lazyWatch(locals, targetName,
               lazyOptions.timeout || 500),
-              _archive(targetName, id, locals, false, description));
+              _archive(targetName, id, locals, false, description), true);
             lazyWatches[id][exp] = true;
           }
           else {
             watches[id][targetName] = locals.$watch(targetName,
-              _archive(targetName, id, locals, false, description));
+              _archive(targetName, id, locals, false, description), true);
             lazyWatches[id][exp] = false;
           }
 

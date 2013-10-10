@@ -1,6 +1,6 @@
 {
   "name": "angular-history",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "repository": "git://github.com/decipherinc/angular-history.git",
   "devDependencies": {
     "grunt-contrib-connect": "~0.4.1",
