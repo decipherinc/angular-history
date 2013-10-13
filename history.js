@@ -12,7 +12,16 @@
 
   var DEEPWATCH_EXP = /^\s*(.*?)\s+for\s+(?:([\$\w][\$\w\d]*)|(?:\(\s*([\$\w][\$\w\d]*)\s*,\s*([\$\w][\$\w\d]*)\s*\)))\s+in\s+(.*?)$/,
     DEFAULT_TIMEOUT = 1000,
-    lazyBindFound = false;
+    lazyBindFound = false,
+    isDefined = angular.isDefined,
+    isUndefined = angular.isUndefined,
+    isFunction = angular.isFunction,
+    isArray = angular.isArray,
+    isString = angular.isString,
+    isObject = angular.isObject,
+    forEach = angular.forEach,
+    copy = angular.copy,
+    bind = angular.bind;
 
   // stub out lazyBind if we don't have it.
   try {
@@ -74,16 +83,16 @@
        * @returns {Watch} This {@link decipher.history.object:Watch Watch instance}
        */
       Watch.prototype._addHandler =
-      function _addHandler(where, name, fn, resolve) {
-        if (!where || !name || !fn) {
-          throw 'invalid parameters to _addHandler()';
-        }
-        this[where][name] = {
-          fn: fn,
-          resolve: resolve || {}
+        function _addHandler(where, name, fn, resolve) {
+          if (!where || !name || !fn) {
+            throw 'invalid parameters to _addHandler()';
+          }
+          this[where][name] = {
+            fn: fn,
+            resolve: resolve || {}
+          };
+          return this;
         };
-        return this;
-      };
 
       /**
        * @description
@@ -115,12 +124,12 @@
        * @returns {Watch} This {@link decipher.history.object:Watch Watch instance}
        */
       Watch.prototype.addChangeHandler =
-      function addChangeHandler(name, fn, resolve) {
-        if (!name || !fn) {
-          throw 'invalid parameters';
-        }
-        return this._addHandler('_changeHandlers', name, fn, resolve);
-      };
+        function addChangeHandler(name, fn, resolve) {
+          if (!name || !fn) {
+            throw 'invalid parameters';
+          }
+          return this._addHandler('_changeHandlers', name, fn, resolve);
+        };
       /**
        * @ngdoc function
        * @name decipher.history.object:Watch#addUndoHandler
@@ -135,12 +144,12 @@
        * @returns {Watch} This {@link decipher.history.object:Watch Watch instance}
        */
       Watch.prototype.addUndoHandler =
-      function addUndoHandler(name, fn, resolve) {
-        if (!name || !fn) {
-          throw 'invalid parameters';
-        }
-        return this._addHandler('_undoHandlers', name, fn, resolve);
-      };
+        function addUndoHandler(name, fn, resolve) {
+          if (!name || !fn) {
+            throw 'invalid parameters';
+          }
+          return this._addHandler('_undoHandlers', name, fn, resolve);
+        };
       /**
        * @ngdoc function
        * @name decipher.history.object:Watch#addRedoHandler
@@ -155,12 +164,12 @@
        * @returns {Watch} This {@link decipher.history.object:Watch Watch instance}
        */
       Watch.prototype.addRedoHandler =
-      function addRedoHandler(name, fn, resolve) {
-        if (!name || !fn) {
-          throw 'invalid parameters';
-        }
-        return this._addHandler('_redoHandlers', name, fn, resolve);
-      };
+        function addRedoHandler(name, fn, resolve) {
+          if (!name || !fn) {
+            throw 'invalid parameters';
+          }
+          return this._addHandler('_redoHandlers', name, fn, resolve);
+        };
       /**
        * @ngdoc function
        * @name decipher.history.object:Watch#addRevertHandler
@@ -175,12 +184,12 @@
        * @returns {Watch} This {@link decipher.history.object:Watch Watch instance}
        */
       Watch.prototype.addRevertHandler =
-      function addRevertHandler(name, fn, resolve) {
-        if (!name || !fn) {
-          throw 'invalid parameters';
-        }
-        return this._addHandler('_revertHandlers', name, fn, resolve);
-      };
+        function addRevertHandler(name, fn, resolve) {
+          if (!name || !fn) {
+            throw 'invalid parameters';
+          }
+          return this._addHandler('_revertHandlers', name, fn, resolve);
+        };
       /**
        * @ngdoc function
        * @name decipher.history.object:Watch#addChangeHandler
@@ -195,12 +204,12 @@
        * @returns {Watch} This {@link decipher.history.object:Watch Watch instance}
        */
       Watch.prototype.addRollbackHandler =
-      function addRollbackHandler(name, fn, resolve) {
-        if (!name || !fn) {
-          throw 'invalid parameters';
-        }
-        return this._addHandler('_rollbackHandlers', name, fn, resolve);
-      };
+        function addRollbackHandler(name, fn, resolve) {
+          if (!name || !fn) {
+            throw 'invalid parameters';
+          }
+          return this._addHandler('_rollbackHandlers', name, fn, resolve);
+        };
 
       /**
        * @ngdoc function
@@ -262,9 +271,9 @@
        * Removes a rollback handler with name `name`.
        */
       Watch.prototype.removeRollbackHandler =
-      function removeRollbackHandler(name) {
-        return this._removeHandler('_rollbackHandlers', name);
-      };
+        function removeRollbackHandler(name) {
+          return this._removeHandler('_rollbackHandlers', name);
+        };
 
       /**
        * @ngdoc function
@@ -277,12 +286,12 @@
        * Removes a redo handler with name `name`.
        */
       Watch.prototype.removeRedoHandler =
-      function removeRedoHandler(name) {
-        if (!name) {
-          throw 'invalid parameters';
-        }
-        return this._removeHandler('_redoHandlers', name);
-      };
+        function removeRedoHandler(name) {
+          if (!name) {
+            throw 'invalid parameters';
+          }
+          return this._removeHandler('_redoHandlers', name);
+        };
 
       /**
        * Fires all handlers for a particular type, optionally w/ a scope.
@@ -292,29 +301,29 @@
        * @private
        */
       Watch.prototype._fireHandlers =
-      function _fireHandlers(where, exp, scope) {
-        var hasScope = angular.isDefined(scope),
-          t = this.transaction, that = this;
-        angular.forEach(this[where], function (handler) {
-          var locals = {
-            $locals: t
-          };
-          if (angular.isDefined(scope)) {
-            locals.$locals = scope;
-          }
-          if (angular.isDefined(exp)) {
-            locals.$expression = exp;
-          }
-          angular.forEach(handler.resolve, function (value, key) {
-            if (hasScope) {
-              locals[key] = $parse(value)(scope);
-            } else {
-              locals[key] = value;
+        function _fireHandlers(where, exp, scope) {
+          var hasScope = isDefined(scope),
+            t = this.transaction, that = this;
+          forEach(this[where], function (handler) {
+            var locals = {
+              $locals: t
+            };
+            if (isDefined(scope)) {
+              locals.$locals = scope;
             }
+            if (isDefined(exp)) {
+              locals.$expression = exp;
+            }
+            forEach(handler.resolve, function (value, key) {
+              if (hasScope) {
+                locals[key] = $parse(value)(scope);
+              } else {
+                locals[key] = value;
+              }
+            });
+            $injector.invoke(handler.fn, scope || that, locals);
           });
-          $injector.invoke(handler.fn, scope || that, locals);
-        });
-      };
+        };
 
       /**
        * Fires the change handlers
@@ -323,9 +332,9 @@
        * @private
        */
       Watch.prototype._fireChangeHandlers =
-      function _fireChangeHandlers(exp, scope) {
-        this._fireHandlers('_changeHandlers', exp, scope);
-      };
+        function _fireChangeHandlers(exp, scope) {
+          this._fireHandlers('_changeHandlers', exp, scope);
+        };
 
       /**
        * Fires the undo handlers
@@ -334,9 +343,9 @@
        * @private
        */
       Watch.prototype._fireUndoHandlers =
-      function _fireUndoHandlers(exp, scope) {
-        this._fireHandlers('_undoHandlers', exp, scope);
-      };
+        function _fireUndoHandlers(exp, scope) {
+          this._fireHandlers('_undoHandlers', exp, scope);
+        };
 
       /**
        * Fires the redo handlers
@@ -345,9 +354,9 @@
        * @private
        */
       Watch.prototype._fireRedoHandlers =
-      function _fireRedoHandlers(exp, scope) {
-        this._fireHandlers('_redoHandlers', exp, scope);
-      };
+        function _fireRedoHandlers(exp, scope) {
+          this._fireHandlers('_redoHandlers', exp, scope);
+        };
 
       /**
        * Fires the revert handlers
@@ -356,25 +365,25 @@
        * @private
        */
       Watch.prototype._fireRevertHandlers =
-      function _fireRevertHandlers(exp, scope) {
-        this._fireHandlers('_revertHandlers', exp, scope);
-      };
+        function _fireRevertHandlers(exp, scope) {
+          this._fireHandlers('_revertHandlers', exp, scope);
+        };
 
       /**
        * Fires the rollback handlers (note lack of scope and expression)
        * @private
        */
       Watch.prototype._fireRollbackHandlers =
-      function _fireRollbackHandlers() {
-        this._fireHandlers('_rollbackHandlers');
-      };
+        function _fireRollbackHandlers() {
+          this._fireHandlers('_rollbackHandlers');
+        };
 
       /**
        * Evaluates an expression on the scope lazily.  That means it will return
        * a new value every DEFAULT_TIMEOUT ms at maximum, even if you change it between
        * now and then.  This allows us to $broadcast at an interval instead of after
        * every scope change.
-       * @param {Scope} scope AngularJS Scope
+       * @param {Object} scope AngularJS Scope
        * @param {string} exp AngularJS expression to evaluate
        * @param {number} [timeout=DEFAULT_TIMEOUT] How often to change the value
        * @returns {Function}
@@ -394,6 +403,32 @@
       };
 
       /**
+       * Initializes object stores for a Scope id
+       * @param {string} id Sccope id
+       * @private
+       */
+      this._initStores = function _initStores(id) {
+        if (isUndefined(watches[id])) {
+          watches[id] = {};
+        }
+        if (isUndefined(lazyWatches[id])) {
+          lazyWatches[id] = {};
+        }
+        if (isUndefined(descriptions[id])) {
+          descriptions[id] = {};
+        }
+        if (isUndefined(history[id])) {
+          history[id] = {};
+        }
+        if (isUndefined(watchObjs[id])) {
+          watchObjs[id] = {};
+        }
+        if (isUndefined(pointers[id])) {
+          pointers[id] = {};
+        }
+      };
+
+      /**
        * When an expression changes, store the information about it
        * and increment a pointer.
        * @param {string|Function} exp Expression
@@ -405,21 +440,16 @@
        * @private
        */
       this._archive = function (exp, id, locals, pass, description) {
+        var _initStores = this._initStores;
         return function (newVal, oldVal) {
           var watchId;
+          _initStores(id);
           if (description) {
             descriptions[id][exp] = $interpolate(description)(locals);
           }
           if (pass) {
             pass = false;
             return;
-          }
-          // initializing a bunch of crap
-          if (angular.isUndefined(history[id])) {
-            history[id] = {};
-          }
-          if (angular.isUndefined(pointers[id])) {
-            pointers[id] = {};
           }
           if (angular.isUndefined(history[id][exp])) {
             history[id][exp] = [];
@@ -428,12 +458,12 @@
             pointers[id][exp] = 0;
           }
           history[id][exp].splice(pointers[id][exp] + 1);
-          history[id][exp].push(angular.copy(newVal));
+          history[id][exp].push(copy(newVal));
           pointers[id][exp] = history[id][exp].length - 1;
           if (pointers[id][exp] > 0) {
             watchId = locals.$$deepWatchId ? locals.$parent.$id : id;
-            if (!batching && angular.isDefined(watchObjs[watchId]) &&
-                angular.isDefined(watchObjs[watchId][exp])) {
+            if (!batching && isDefined(watchObjs[watchId]) &&
+              isDefined(watchObjs[watchId][exp])) {
               watchObjs[watchId][exp]._fireChangeHandlers(exp, locals);
             }
             $rootScope.$broadcast('History.archived', {
@@ -483,7 +513,7 @@
        </example>
        */
       this.watch = function watch(exps, scope, description, lazyOptions) {
-        if (angular.isUndefined(exps)) {
+        if (isUndefined(exps)) {
           throw 'expression required';
         }
         scope = scope || $rootScope;
@@ -493,46 +523,38 @@
           exp,
           model;
 
-        if (!angular.isArray(exps)) {
+        if (!isArray(exps)) {
           exps = [exps];
         }
-        if (angular.isUndefined(watches[id])) {
-          watches[id] = {};
-        }
-        if (angular.isUndefined(lazyWatches[id])) {
-          lazyWatches[id] = {};
-        }
+
+        this._initStores(id);
+
         i = exps.length;
         while (i--) {
           exp = exps[i];
 
           // assert we have an assignable model
-          // TODO: better way to do this?
-          try {
-            model = $parse(exp);
-            model.assign(scope, model(scope));
-          } catch (e) {
+          model = $parse(exp);
+          if (isUndefined(model.assign)) {
             throw 'expression "' + exp +
-                  '" is not an assignable expression';
+              '" is not an assignable expression';
           }
 
           // blast any old watches
-          if (angular.isFunction(watches[id][exp])) {
+          if (isFunction(watches[id][exp])) {
             watches[id][exp]();
           }
 
-          if (!descriptions[id]) {
-            descriptions[id] = {};
-          }
           descriptions[id][exp] = $interpolate(description)(scope);
 
           this._watch(exp, scope, false, lazyOptions);
 
         }
-        if (angular.isUndefined(watchObjs[id])) {
+        if (isUndefined(watchObjs[id])) {
           watchObjs[id] = {};
         }
-        return watchObjs[id][exp] = new Watch();
+        watchObjs[id][exp] = new Watch();
+        return watchObjs[id][exp];
       };
 
       /**
@@ -591,84 +613,92 @@
        * @return {Watch} {@link decipher.history.object:Watch Watch instance}
        */
       this.deepWatch =
-      function deepWatch(exp, scope, description, lazyOptions) {
-        var match,
-          targetName,
-          valueFn,
-          keyName,
-          valuesFn,
-          values,
-          value,
-          valueName,
-          valuesName,
-          watchFn,
-          _clear = this._clear,
-          _archive = this._archive;
-        description = description || '';
-        if (!(match = exp.match(DEEPWATCH_EXP))) {
-          throw 'expected expression in form of "_select_ for (_key_,)? _value_ in _collection_" but got "' +
-                exp + '"';
-        }
-        targetName = match[1];
-        valueName = match[4] || match[2];
-        valueFn = $parse(valueName);
-        keyName = match[3];
-        valuesName = match[5];
-        valuesFn = $parse(valuesName);
-        values = valuesFn(scope);
+        function deepWatch(exp, scope, description, lazyOptions) {
+          var match,
+            targetName,
+            valueFn,
+            keyName,
+            value,
+            valueName,
+            valuesName,
+            id = scope.$id,
+            _clear = this._clear,
+            _initStores = this._initStores,
+            _archive = bind(this, this._archive),
+            createDeepWatch = function createDeepWatch(targetName, valueName,
+              keyName) {
+              return function (values) {
+                forEach(values, function (v, k) {
 
-        if (angular.isUndefined(scope.$$deepWatch)) {
-          scope.$$deepWatch = {};
-        }
-        scope.$$deepWatch[exp] = ++deepWatchId;
+                  var locals = scope.$new(),
+                    id = locals.$id;
+                  locals.$$deepWatchId = scope.$$deepWatch[valuesName];
+                  locals.$$deepWatchTargetName = targetName;
+                  locals[valueName] = v;
+                  if (keyName) {
+                    locals[keyName] = k;
+                  }
+                  value = valueFn(scope, locals);
 
-        angular.forEach(values, function (v, k) {
-          var locals = scope.$new(),
-            id = locals.$id;
-          locals.$$deepWatchId = scope.$$deepWatch[exp];
-          locals.$$deepWatchTargetName = targetName;
-          locals[valueName] = v;
-          if (keyName) {
-            locals[keyName] = k;
+                  _initStores(id);
+
+                  descriptions[id][exp] = $interpolate(description)(locals);
+
+                  if (lazyBindFound && isObject(lazyOptions)) {
+                    watches[id][targetName] =
+                      locals.$watch(lazyWatch(locals, targetName,
+                        lazyOptions.timeout || 500),
+                        _archive(targetName, id, locals, false, description),
+                        true);
+                    lazyWatches[id][targetName] = true;
+                  }
+                  else {
+                    watches[id][targetName] = locals.$watch(targetName,
+                      _archive(targetName, id, locals, false, description),
+                      true);
+                    lazyWatches[id][targetName] = false;
+                  }
+
+                  locals.$on('$destroy', function () {
+                    _clear(locals);
+                  });
+
+                });
+
+              };
+            };
+
+          description = description || '';
+          if (!(match = exp.match(DEEPWATCH_EXP))) {
+            throw 'expected expression in form of "_select_ for (_key_,)? _value_ in _collection_" but got "' +
+              exp + '"';
           }
-          value = valueFn(scope, locals);
+          targetName = match[1];
+          valueName = match[4] || match[2];
+          valueFn = $parse(valueName);
+          keyName = match[3];
+          valuesName = match[5];
 
-          if (!watches[id]) {
-            watches[id] = {};
-          }
-          if (!lazyWatches[id]) {
-            lazyWatches[id] = {};
-          }
-          if (!descriptions[id]) {
-            descriptions[id] = {};
-          }
-          descriptions[id][exp] = $interpolate(description)(locals);
-
-          if (angular.isObject(lazyOptions) && lazyBindFound) {
-            watches[id][targetName] =
-            locals.$watch(lazyWatch(locals, targetName,
-              lazyOptions.timeout || 500),
-              _archive(targetName, id, locals, false, description), true);
-            lazyWatches[id][exp] = true;
-          }
-          else {
-            watches[id][targetName] = locals.$watch(targetName,
-              _archive(targetName, id, locals, false, description), true);
-            lazyWatches[id][exp] = false;
+          if (isUndefined(scope.$$deepWatch)) {
+            scope.$$deepWatch = {};
           }
 
-          locals.$on('$destroy', function () {
-            _clear(locals);
-          });
+          // if we already have a deepWatch on this value, we
+          // need to kill all the child scopes.
+          if (isDefined(scope.$$deepWatch[valuesName])) {
+            _clear(scope, valuesName);
+          }
+          scope.$$deepWatch[valuesName] = ++deepWatchId;
 
-        });
+          _initStores(id);
 
-        if (angular.isUndefined(watchObjs[scope.$id])) {
-          watchObjs[scope.$id] = {};
-        }
+          watches[id][valuesName] = scope.$watchCollection(valuesName,
+            createDeepWatch(targetName, valueName, keyName));
 
-        return watchObjs[scope.$id][targetName] = new Watch();
-      };
+          watchObjs[id][valuesName] = new Watch();
+
+          return watchObjs[id][valuesName];
+        };
 
       /**
        * Clears a bunch of information for a scope and optionally an array of expressions.
@@ -682,57 +712,61 @@
         var id = scope.$id,
           i,
           exp,
-          childHead,
           nextSibling,
+          destroy,
+          child,
           dwid;
 
-        function clear(id, exp) {
-          angular.forEach(watches[id], function (watch) {
-            if (angular.isFunction(watch)) {
-              watch();
-            }
-          });
-          if (angular.isDefined(watches[id]) &&
-              angular.isFunction(watches[id][exp])) {
-            watches[id][exp]();
+        function clear(id, key) {
+          if (isDefined(watches[id]) &&
+            isFunction(watches[id][key])) {
+            watches[id][key]();
           }
-          if (angular.isDefined(watches[id])) {
-            delete watches[id][exp];
+          if (isDefined(watches[id])) {
+            delete watches[id][key];
           }
-          if (angular.isDefined(history[id])) {
-            delete history[id][exp];
+          if (isDefined(history[id])) {
+            delete history[id][key];
           }
-          if (angular.isDefined(pointers[id])) {
-            delete pointers[id][exp];
+          if (isDefined(pointers[id])) {
+            delete pointers[id][key];
           }
-          if (angular.isDefined(lazyWatches[id])) {
-            delete lazyWatches[id][exp];
+          if (isDefined(lazyWatches[id])) {
+            delete lazyWatches[id][key];
           }
         }
 
-        exps = angular.isArray(exps) ? exps : Object.keys(watches[id]);
+        if (isString(exps)) {
+          exps = [exps];
+        }
+        else if (isUndefined(exps) && isDefined(watches[id])) {
+          exps = Object.keys(watches[id]);
+        }
 
-        i = exps.length;
-        while (i--) {
-          exp = exps[i];
-          clear(id, exp);
-          if (angular.isDefined(scope.$$deepWatch)) {
-            // find children.
-            dwid = scope.$$deepWatch[exp];
-            childHead = scope.$$childHead;
-            if (childHead) {
-              if (childHead.$$deepWatchId === dwid) {
-                clear(childHead.$id, childHead.$$deepWatchTargetName);
-              }
-              nextSibling = childHead;
-              while (nextSibling = nextSibling.$$nextSibling) {
+        if (isDefined(exps)) {
+          i = exps.length;
+          while (i--) {
+            destroy = false;
+            exp = exps[i];
+            clear(id, exp);
+            if (isDefined(scope.$$deepWatch)) {
+              // find children.
+              dwid = scope.$$deepWatch[exp];
+              nextSibling = scope.$$childHead;
+              while (nextSibling) {
                 if (nextSibling.$$deepWatchId === dwid) {
-                  clear(nextSibling.$id, childHead.$$deepWatchTargetName);
+                  destroy = true;
+                }
+                child = nextSibling;
+                nextSibling = nextSibling.$$nextSibling;
+                if (destroy) {
+                  child.$destroy();
                 }
               }
             }
           }
         }
+
       };
 
 
@@ -748,7 +782,7 @@
        */
       this.forget = function forget(exps, scope) {
         scope = scope || $rootScope;
-        if (!angular.isArray(exps) && angular.isString(exps)) {
+        if (!isArray(exps) && isString(exps)) {
           exps = [exps];
         }
         this._clear(scope, exps);
@@ -768,7 +802,7 @@
         var model,
           oldValue,
           id = scope.$id;
-        if (angular.isFunction(watches[id][exp])) {
+        if (isFunction(watches[id][exp])) {
           watches[id][exp]();
           delete watches[id][exp];
         }
@@ -794,7 +828,7 @@
        */
       this.undo = function undo(exp, scope) {
         scope = scope || $rootScope;
-        if (angular.isUndefined(exp)) {
+        if (isUndefined(exp)) {
           throw 'expression required';
         }
         var id = scope.$id,
@@ -804,14 +838,14 @@
           pointer,
           watchId;
 
-        if (angular.isUndefined(scopeHistory)) {
+        if (isUndefined(scopeHistory)) {
           throw 'could not find history for scope ' + id;
         }
 
         stack = scopeHistory[exp];
-        if (angular.isUndefined(stack)) {
+        if (isUndefined(stack)) {
           throw 'could not find history in scope "' + id +
-                ' against expression "' + exp + '"';
+            ' against expression "' + exp + '"';
         }
         pointer = --pointers[id][exp];
         if (pointer < 0) {
@@ -821,8 +855,8 @@
         }
         values = this._do(scope, exp, stack, pointer);
         watchId = scope.$$deepWatchId ? scope.$parent.$id : scope.$id;
-        if (angular.isDefined(watchObjs[watchId]) &&
-            angular.isDefined(watchObjs[watchId][exp])) {
+        if (isDefined(watchObjs[watchId]) &&
+          isDefined(watchObjs[watchId][exp])) {
           watchObjs[watchId][exp]._fireUndoHandlers(exp, scope);
         }
 
@@ -850,16 +884,17 @@
         id = scope.$id;
 
         // do we have an array or object?
-        if (lazyBindFound && (angular.isObject(lazyOptions) ||
-                              (lazyWatches[id] && !!lazyWatches[id][exp]))) {
+        if (lazyBindFound && (isObject(lazyOptions) ||
+          (lazyWatches[id] && !!lazyWatches[id][exp]))) {
           watches[id][exp] =
-          scope.$watch(lazyWatch(scope, exp, lazyOptions.timeout),
-            this._archive(exp, id, scope, pass), true);
+            scope.$watch(lazyWatch(scope, exp, lazyOptions.timeout),
+              bind(this, this._archive(exp, id, scope, pass)), true);
           lazyWatches[id][exp] = true;
         }
         else {
           watches[id][exp] =
-          scope.$watch(exp, this._archive(exp, id, scope, pass), true);
+            scope.$watch(exp, bind(this, this._archive(exp, id, scope, pass)),
+              true);
           lazyWatches[id][exp] = false;
         }
 
@@ -882,9 +917,9 @@
           values,
           pointer,
           watchId;
-        if (angular.isUndefined(stack)) {
+        if (isUndefined(stack)) {
           throw 'could not find history in scope "' + id +
-                ' against expression "' + exp + '"';
+            ' against expression "' + exp + '"';
         }
         pointer = ++pointers[id][exp];
         if (pointer === stack.length) {
@@ -896,15 +931,15 @@
         values = this._do(scope, exp, stack, pointer);
 
         watchId = scope.$$deepWatchId ? scope.$parent.$id : scope.$id;
-        if (angular.isDefined(watchObjs[watchId]) &&
-            angular.isDefined(watchObjs[watchId][exp])) {
+        if (isDefined(watchObjs[watchId]) &&
+          isDefined(watchObjs[watchId][exp])) {
           watchObjs[watchId][exp]._fireRedoHandlers(exp, scope);
         }
 
         $rootScope.$broadcast('History.redone', {
           expression: exp,
-          oldValue: angular.copy(values.newValue),
-          newValue: angular.copy(values.oldValue),
+          oldValue: copy(values.newValue),
+          newValue: copy(values.oldValue),
           description: descriptions[id][exp],
           scope: scope
         });
@@ -939,9 +974,9 @@
         var id;
         scope = scope || $rootScope;
         id = scope.$id;
-        return angular.isDefined(pointers[id]) &&
-               angular.isDefined(pointers[id][exp]) &&
-               pointers[id][exp] > 0;
+        return isDefined(pointers[id]) &&
+          isDefined(pointers[id][exp]) &&
+          pointers[id][exp] > 0;
       };
 
       /**
@@ -976,9 +1011,9 @@
         var id;
         scope = scope || $rootScope;
         id = scope.$id;
-        return angular.isDefined(pointers[id]) &&
-               angular.isDefined(pointers[id][exp]) &&
-               pointers[id][exp] < history[id][exp].length - 1;
+        return isDefined(pointers[id]) &&
+          isDefined(pointers[id][exp]) &&
+          pointers[id][exp] < history[id][exp].length - 1;
       };
 
       /**
@@ -1000,7 +1035,7 @@
           stack = history[id][exp],
           values,
           watchId;
-        if (angular.isUndefined(stack)) {
+        if (isUndefined(stack)) {
           $log.warn('nothing to revert');
           return;
         }
@@ -1011,15 +1046,15 @@
         pointers[id][exp] = pointer;
 
         watchId = scope.$$deepWatchId ? scope.$parent.$id : id;
-        if (angular.isDefined(watchObjs[watchId]) &&
-            angular.isDefined(watchObjs[watchId][exp])) {
+        if (isDefined(watchObjs[watchId]) &&
+          isDefined(watchObjs[watchId][exp])) {
           watchObjs[watchId][exp]._fireRevertHandlers(exp, scope);
         }
 
         $rootScope.$broadcast('History.reverted', {
           expression: exp,
-          oldValue: angular.copy(values.newValue),
-          newValue: angular.copy(values.oldValue),
+          oldValue: copy(values.newValue),
+          newValue: copy(values.oldValue),
           description: descriptions[id][exp],
           scope: scope,
           pointer: pointer
@@ -1068,7 +1103,7 @@
               };
 
               $rootScope.rollback = function() {
-                if (angular.isDefined(t)) {
+                if (isDefined(t)) {
                   History.rollback(t);
                 }
               };
@@ -1088,10 +1123,11 @@
        */
       this.batch = function batch(fn, scope, description) {
         var _clear = this._clear,
+          _initStores = this._initStores,
           listener,
           child;
         scope = scope || $rootScope;
-        if (!angular.isFunction(fn)) {
+        if (!isFunction(fn)) {
           throw 'transaction requires a function';
         }
 
@@ -1111,10 +1147,9 @@
             });
             deepChild.$$locals = data.locals;
             id = deepChild.$id;
-            history[id] = {};
-            pointers[id] = {};
+            _initStores(id);
             history[id][exp] =
-            angular.copy(history[data.locals.$id][exp]);
+              copy(history[data.locals.$id][exp]);
             pointers[id][exp] = pointers[data.locals.$id][exp] - 1;
           }
         });
@@ -1141,7 +1176,8 @@
             });
           });
 
-        return watchObjs[child.$id] = new Watch(child);
+        watchObjs[child.$id] = new Watch(child);
+        return watchObjs[child.$id];
       };
 
       /**
@@ -1157,15 +1193,15 @@
        */
       this.rollback = function rollback(t) {
 
-        var _do = angular.bind(this, this._do),
+        var _do = bind(this, this._do),
           parent = t.$parent,
           packets = {},
           childHead,
           childHeadLocals,
           nextSibling,
           nextSiblingLocals;
-        if (!t || !angular.isObject(t)) {
-          throw 'must pass a scope to rollback'
+        if (!t || !isObject(t)) {
+          throw 'must pass a scope to rollback';
         }
 
         function _rollback(scope, comparisonScope) {
@@ -1216,25 +1252,18 @@
           }
         }
 
-        if (angular.isDefined(parent) &&
-            angular.isDefined(history[parent.$id])) {
+        if (isDefined(parent) &&
+          isDefined(history[parent.$id])) {
           _rollback(t, parent);
         }
-        childHead = t.$$childHead;
-        if (childHead) {
-          childHeadLocals = childHead.$$locals;
-          if (childHeadLocals) {
-            _rollback(childHead, childHeadLocals);
+        nextSibling = t.$$childHead;
+        while (nextSibling) {
+          nextSiblingLocals = nextSibling.$$locals;
+          if (nextSiblingLocals) {
+            _rollback(nextSibling, nextSiblingLocals);
           }
-          nextSibling = childHead;
-          while (nextSibling = nextSibling.$$nextSibling) {
-            nextSiblingLocals = nextSibling.$$locals;
-            if (nextSiblingLocals) {
-              _rollback(nextSibling, nextSiblingLocals);
-            }
-          }
+          nextSibling = nextSibling.$$nextSibling;
         }
-
         watchObjs[t.$id]._fireRollbackHandlers();
 
         $rootScope.$broadcast('History.rolledback', packets);

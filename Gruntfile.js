@@ -42,7 +42,7 @@ module.exports = function (grunt) {
           'test/test-history.html',
           'test/test-history.js'
         ],
-        tasks: ['qunit']
+        tasks: ['test']
       }
     },
     ngdocs: {

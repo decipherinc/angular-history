@@ -7,7 +7,7 @@ do with the "back" button, unless you want it to.
 Current Version
 ===============
 ```
-0.5.2
+0.6.0
 ```
 
 *Fair warning:* Until this project is at `1.0.0` the API is subject to change
@@ -23,7 +23,7 @@ bower install angular-history
 Requirements
 ============
 
-- AngularJS 1.0.8+
+- AngularJS 1.1.x+
 - [ngLazyBind](https://github.com/Ticore/ngLazyBind) (optional)
 
 Running Tests
