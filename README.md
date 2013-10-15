@@ -7,7 +7,7 @@ do with the "back" button, unless you want it to.
 Current Version
 ===============
 ```
-0.6.0
+0.7.0
 ```
 
 *Fair warning:* Until this project is at `1.0.0` the API is subject to change
@@ -204,10 +204,10 @@ Forgetting
 If you want to stop watching an expression for changes, issue:
 
 ```javascript
-History.forget('foo', $scope);
+History.forget($scope, 'foo');
 ```
 
-The history will be purged and the watch will be removed.
+The history will be purged and the watch will be removed.  Note that the `$scope` parameter comes first.  If you omit the second parameter, all of the history data and watches for the scope will be destroyed.  If you omit the first parameter, this will wipe the entire History service.
 
 Fanciness: Deep Watching
 ------------------------

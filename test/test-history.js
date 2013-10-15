@@ -325,7 +325,7 @@
     History.watch(['cows', 'pigs'], scope);
     scope.$apply('cows = "deer"');
     scope.$apply('pigs = "elk"');
-    History.forget(['cows', 'pigs'], scope);
+    History.forget(scope, ['cows', 'pigs']);
     Q.ok(angular.isUndefined(History.history[scope.$id]['cows']),
       'history undefined for cows');
     Q.ok(angular.isUndefined(History.history[scope.$id]['pigs']),
@@ -380,6 +380,9 @@
     });
 
     scope.$apply('data[1].name = "fred"');
+
+    History.forget(scope);
+    scope.$apply();
 
     scope.data = [
       {id: 1, name: 'foo'},
