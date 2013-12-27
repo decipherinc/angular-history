@@ -616,6 +616,7 @@
             value,
             valueName,
             valuesName,
+            watchObj,
             id = scope.$id,
             _clear = bind(this, this._clear),
             _initStores = this._initStores,
@@ -659,11 +660,6 @@
                   }
 
                   watchObjs[id][targetName] = watchObj;
-
-                  locals.$on('$destroy', function () {
-                    _clear(locals);
-                  });
-
                 });
 
               };
@@ -685,19 +681,26 @@
           }
 
           // if we already have a deepWatch on this value, we
-          // need to kill all the child scopes.
+          // need to kill all the child scopes. because reasons
           if (isDefined(scope.$$deepWatch[targetName])) {
             _clear(scope, targetName);
           }
           scope.$$deepWatch[targetName] = ++deepWatchId;
 
           _initStores(id);
-          watchObjs[id][targetName] = new Watch();
+          watchObjs[id][targetName] = watchObj = new Watch(targetName, scope);
+
+          // TODO: assert this doesn't leak memory like crazy. it might if
+          // we remove things from the values context.
           watches[id][targetName] = scope.$watchCollection(valuesName,
             createDeepWatch(targetName, valueName, keyName,
-              watchObjs[id][targetName]));
+              watchObj));
 
-          return watchObjs[id][targetName];
+          scope.$on('$destroy', function () {
+            _clear(scope);
+          });
+
+          return watchObj;
         };
 
       /**
@@ -714,22 +717,79 @@
           nextSibling,
           exp;
 
+        /**
+         * Polyfill for Object.keys
+         *
+         * @see: https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Object/keys
+         */
+        if (!Object.keys) {
+          Object.keys = (function () {
+            var hasOwnProperty = Object.prototype.hasOwnProperty,
+              hasDontEnumBug = !({toString: null}).propertyIsEnumerable('toString'),
+              dontEnums = [
+                'toString',
+                'toLocaleString',
+                'valueOf',
+                'hasOwnProperty',
+                'isPrototypeOf',
+                'propertyIsEnumerable',
+                'constructor'
+              ],
+              dontEnumsLength = dontEnums.length;
+
+            return function (obj) {
+              if (typeof obj !== 'object' && typeof obj !== 'function' ||
+                obj === null) {
+                throw new TypeError('Object.keys called on non-object');
+              }
+
+              var result = [];
+
+              for (var prop in obj) {
+                if (hasOwnProperty.call(obj, prop)) {
+                  result.push(prop);
+                }
+              }
+
+              if (hasDontEnumBug) {
+                for (var i = 0; i < dontEnumsLength; i++) {
+                  if (hasOwnProperty.call(obj,
+                    dontEnums[i])) {
+                    result.push(dontEnums[i]);
+                  }
+                }
+              }
+              return result;
+            };
+          })();
+        }
+
         function clear(id, key) {
-          if (isDefined(watches[id]) &&
-            isFunction(watches[id][key])) {
-            watches[id][key]();
+          function doClear(what) {
+            if (isDefined(what[id][key])) {
+              delete what[id][key];
+              if (Object.keys(what[id]).length === 0) {
+                delete what[id];
+              }
+            }
           }
           if (isDefined(watches[id])) {
-            delete watches[id][key];
+            if (isFunction(watches[id][key])) {
+              watches[id][key]();
+            }
+            doClear(watches);
+          }
+          if (isDefined(watchObjs[id])) {
+            doClear(watchObjs);
           }
           if (isDefined(history[id])) {
-            delete history[id][key];
+            doClear(history);
           }
           if (isDefined(pointers[id])) {
-            delete pointers[id][key];
+            doClear(pointers);
           }
           if (isDefined(lazyWatches[id])) {
-            delete lazyWatches[id][key];
+            doClear(lazyWatches);
           }
         }
 
@@ -764,7 +824,7 @@
         }
         nextSibling = scope.$$childHead;
         while (nextSibling) {
-          this._clear(nextSibling.$id, exp);
+          this._clear(nextSibling, exp);
           nextSibling = nextSibling.$$nextSibling;
         }
       };
