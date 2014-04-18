@@ -981,7 +981,7 @@
         model = $parse(exp);
         oldValue = model(scope);
         // todo: assert there's no bug here with unassignable expressions
-        model.assign(scope, stack[pointer]);
+        model.assign(scope, copy(stack[pointer]));
         this._watch(exp, scope, true);
         return {
           oldValue: oldValue,
