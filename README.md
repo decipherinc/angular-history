@@ -7,7 +7,7 @@ do with the "back" button, unless you want it to.
 Current Version
 ===============
 ```
-0.7.4
+0.7.5
 ```
 
 *Fair warning:* Until this project is at `1.0.0` the API is subject to change
@@ -36,7 +36,7 @@ npm install
 ```
 
 to grab the dependencies.  Then execute:
- 
+
 ```
 grunt test
 ```
@@ -225,7 +225,7 @@ $scope.foos = [
   {id: 2, name: 'blinken'},
   {id: 3, name: 'nod'}
 ];
-History.deepWatch('f.name for f in foos', $scope, 
+History.deepWatch('f.name for f in foos', $scope,
   'Foo with ID {{f.id}} changed to {{f.name}}');
 ```
 
@@ -238,7 +238,7 @@ $scope.foos = {
   '3': {name: 'fo'},
   '4': {name: 'fum'}
 };
-History.deepWatch('value.name for (key, value) in foos', $scope, 
+History.deepWatch('value.name for (key, value) in foos', $scope,
   'Foo with ID {{key}} changed its name to {{value.name}}');
 ```
 
@@ -252,7 +252,7 @@ There are two ways to handle this.
 The first is to listen for the `History.archived` event:
 
 ```javascript
-History.deepWatch('f.name for f in foos', $scope, 
+History.deepWatch('f.name for f in foos', $scope,
   'Foo with ID {{f.id}} changed to {{f.name}}');
 
 $scope.$on('History.archived', function(evt, data) {
