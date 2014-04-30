@@ -478,7 +478,7 @@
         var ignore = this.$ignores[eventName];
         if (!ignore ||
           (isFunction(ignore.callback) &&
-            !$injector.invoke(ignore.callback, this.scope, ignore.resolve))) {
+            !$injector.invoke(ignore.callback, this.scope, angular.extend(ignore.resolve, {$data: data})))) {
           $rootScope.$broadcast(eventName, data);
         }
       };

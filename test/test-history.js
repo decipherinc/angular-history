@@ -544,8 +544,9 @@
 
   });
 
-  Q.test('Watch objects', 9, function () {
+  Q.test('Watch objects', 12, function () {
     var scope = this.scope,
+      $broadcast = this.sandbox.stub(this.$rootScope, '$broadcast'),
       History = this.History,
       changeSpy = this.sandbox.spy(),
       undoSpy = this.sandbox.spy(),
@@ -631,8 +632,26 @@
 
     Q.equal(Object.keys(w.$handlers.$rollback), 0,
       'we removed the rollback handlers');
+
+    // Test ignoreEvent
+    var callCount = $broadcast.callCount;
+    w = History.watch('bar', scope);
+    scope.$apply('bar = 1');
+    Q.equal($broadcast.callCount, callCount + 1, 'Event is seen');
+    w.ignoreEvent('History.archived', function () {
+      // Ignore the event
+      return true;
+    });
+    scope.$apply('bar = 2');
+    Q.equal($broadcast.callCount, callCount + 1, 'Event is not seen');
+    w.ignoreEvent('History.archived', function () {
+      // Do not ignore the event
+      return false;
+    });
+    scope.$apply('bar = 3');
+    Q.equal($broadcast.callCount, callCount + 2, 'Event is seen again');
   });
-  
+
   Q.test('Continue correctly after revert (or undo)', 4, function () {
     var scope = this.scope,
       History = this.History;
