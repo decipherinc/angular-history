@@ -76,7 +76,7 @@
     lazyBindFound = true;
   }
   catch (e) {
-    angular.module('lazyBind', []).factory('$lazyBind', angular.noop);
+    angular.module('lazyBind', []).factory('$lazyBind', function() {return angular.noop});
   }
 
   /**
