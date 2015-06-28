@@ -7,7 +7,7 @@ do with the "back" button, unless you want it to.
 Current Version
 ===============
 ```
-0.7.5
+0.8.0
 ```
 
 *Fair warning:* Until this project is at `1.0.0` the API is subject to change
