@@ -85,9 +85,8 @@
    * @description
    * Provides an API for keeping a history of model values.
    */
-  angular.module('decipher.history', ['lazyBind']).service('History',
-    function ($parse, $rootScope, $interpolate, $lazyBind, $timeout, $log,
-      $injector) {
+  angular.module('decipher.history', ['lazyBind']).service('History', ['$parse', '$rootScope', '$interpolate', '$lazyBind', '$timeout', '$log', '$injector',
+    function ($parse, $rootScope, $interpolate, $lazyBind, $timeout, $log, $injector) {
       var service = this,
         history = {},
         pointers = {},
@@ -1513,5 +1512,5 @@
        * @type {Watch}
        */
       this.Watch = Watch;
-    });
+    }]);
 })();
