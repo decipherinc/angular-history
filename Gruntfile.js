@@ -27,12 +27,8 @@ module.exports = function (grunt) {
         }
       }
     },
-    bower: {
+    'bower-install-simple': {
       install: {
-        options: {
-          targetDir: './test/lib',
-          cleanup: true
-        }
       }
     },
     watch: {
@@ -60,12 +56,12 @@ module.exports = function (grunt) {
 
   grunt.loadNpmTasks('grunt-contrib-qunit');
   grunt.loadNpmTasks('grunt-contrib-connect');
-  grunt.loadNpmTasks('grunt-bower-task');
+  grunt.loadNpmTasks('grunt-bower-install-simple');
   grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-ngdocs');
   grunt.loadNpmTasks('grunt-contrib-clean');
 
-  grunt.registerTask('test', ['bower:install', 'connect:test', 'qunit']);
+  grunt.registerTask('test', ['bower-install-simple:install', 'connect:test', 'qunit']);
   grunt.registerTask('testwatch',
     ['bower:install', 'connect:test', 'qunit', 'watch']);
   grunt.registerTask('default',

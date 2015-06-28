@@ -1,10 +1,7 @@
 language: node_js
 node_js:
-  - "0.10"
-before_script:
-  - npm install -g bower
-  - bower install
-
+  - "0.12"
 notifications:
-  webhooks: https://decipher.slack.com/services/hooks/travis?token=HVwq2t51QSNvSX92axsm0gSL
+  webhooks:
+    secure: "OISQeyASHba0D27zEnCZ/u/h/VYZoWlWYilLpdWNulfezKKZb52roZ/gNt+Rrnl5caIZsWwIImWdI1ySizlWsFpkDm/dm+kCvXytynYvf0Z5VdVot+cQJQWbjl619DLKJHYAWsVXJjtYTZ2pVTBNOy3ctCgGordOUwir5h2Y5+E="
 
