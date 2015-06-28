@@ -1,14 +1,14 @@
 {
   "name": "angular-history",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "main": "history.js",
   "dependencies": {},
   "devDependencies": {
-    "sinonjs": "1.7.1",
-    "sinon-qunit": "1.0.0",
-    "qunit": "1.12.0",
-    "angular": "~1.3",
-    "angular-mocks": "~1.3"
+    "sinonjs": "~1.7.1",
+    "sinon-qunit": "~1.0.0",
+    "qunit": "~1.12.0",
+    "angular": "~1.4.1",
+    "angular-mocks": "~1.4.1"
   },
   "ignore": [
     "**/.*",

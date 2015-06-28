@@ -1,6 +1,6 @@
 {
   "name": "angular-history",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "license": "MIT",
   "repository": "git://github.com/decipherinc/angular-history.git",
   "devDependencies": {
