@@ -767,7 +767,7 @@
        <button ng-disabled="!canUndo()" ng-click="undo()">Undo!</button>
        </file>
        </example>
-       * @param {(string|string[])} exp Expression or array of expressions to watch
+       * @param {string} exp Expression to watch
        * @param {Scope=} scope Scope; defaults to `$rootScope`
        * @param {string=} description Description of this change
        * @param {Object=} lazyOptions Options for lazy loading.  Only valid
