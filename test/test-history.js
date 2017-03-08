@@ -679,4 +679,49 @@
     Q.deepEqual(History.history[scope.$id].foo, [{}, {bar: 'spam'}],
       'modification of foo does not affect stack');
   });
+  
+  Q.test('Continue correctly after revert (or undo)', 5, function () {
+    var scope = this.scope,
+        History = this.History,
+        expectedStack;
+
+    // set watch on foo
+    scope.$apply('foo = "bar"');
+    scope.$apply(function () {
+        History.watch('foo', scope);
+    });
+
+    // do some changes to fill up the history stack
+    scope.$apply('foo = "baz"');
+    scope.$apply('foo = "baz1"');
+    scope.$apply('foo = "baz2"');
+    scope.$apply('foo = "baz3"');
+
+    expectedStack = ['bar', 'baz', 'baz1', 'baz2', 'baz3'];
+    Q.deepEqual(History.history[scope.$id].foo, expectedStack,
+        'history stack is as expected: ' + JSON.stringify(expectedStack));
+
+    // now revert to "baz" at position 1
+    scope.$apply(function () {
+        History.revert('foo', scope, 1);
+    });
+    Q.equal(scope.foo, 'baz', 'foo became baz again');
+
+    // re-continue from reverted value
+    scope.$apply('foo = "baz-recontinued"');
+    Q.equal(scope.foo, 'baz-recontinued', 'foo became baz-recontinued');
+
+    // test if history stack is correct
+    expectedStack = ['bar', 'baz', 'baz-recontinued'];
+    Q.deepEqual(History.history[scope.$id].foo, expectedStack,
+        'history stack is as expected: ' + JSON.stringify(expectedStack));
+
+    // do some more changes to fill up the history stack again
+    scope.$apply('foo = "baz-recontinued1"');
+    scope.$apply('foo = "baz-recontinued2"');
+    scope.$apply('foo = "baz-recontinued3"');
+
+    // test if original value on stack is unchanged
+    Q.equal(History.history[scope.$id].foo[1], 'baz', 'history[1] of foo is unchanged: "baz"');
+  });
 })();
